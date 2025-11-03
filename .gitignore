@@ -1,0 +1,10 @@
+.qodo
+.vscode
+exemples/BCC_11_4_4
+exemples/cas_cyl
+tmp
+volVIC/fg_bg.svg
+volVIC/__pycache__
+volVIC.egg-info
+build
+
