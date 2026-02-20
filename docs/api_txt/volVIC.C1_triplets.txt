@@ -1,0 +1,138 @@
+MODULE: volVIC.C1_triplets
+==========================
+Documentation for module volVIC.C1_triplets
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> recover_nodes_couples_from_unique_inds(
+    unique_nodes_inds: numpy.ndarray[numpy.integer]
+) -> numpy.ndarray[numpy.integer]
+      Recover all unordered pairs of node indices sharing the same unique node ID.
+      
+      This function is intended for multipatch B-spline lattices, where multiple
+      nodes may correspond to the same unique node (shared across patches). It
+      returns all combinations of indices `(i, j)` such that both nodes correspond
+      to the same unique node ID.
+      
+      Parameters
+      ----------
+      unique_nodes_inds : np.ndarray of int
+          Array of length `n_nodes` mapping each mesh node to its unique node ID.
+      
+      Returns
+      -------
+      np.ndarray of int, shape (n_couples, 2)
+          Array of node index pairs `(i, j)` with `i < j`, for all nodes sharing the
+          same unique node ID.
+      
+      Notes
+      -----
+      - The output pairs are sorted by group but not globally by node index.
+      - Each unique unordered pair is returned exactly once.
+
+  >>> get_all_triplets(
+    unique_nodes_inds: numpy.ndarray[numpy.integer],
+    shape_by_patch: numpy.ndarray[numpy.integer]
+) -> numpy.ndarray[numpy.integer]
+      Compute triplets of nodes `(A, B, C)` for C1 continuity constraints.
+      
+      For lattice or multipatch meshes, each triplet corresponds to three nodes
+      that form a C1 constraint (smoothness across patches). This function handles
+      corner cases and boundary nodes, ensuring only valid triplets are returned.
+      
+      Parameters
+      ----------
+      unique_nodes_inds : np.ndarray of int
+          Array mapping each mesh node to its unique node ID.
+      shape_by_patch : np.ndarray of int, shape (n_patches, 2)
+          Number of nodes along each parametric direction per patch.
+      
+      Returns
+      -------
+      np.ndarray of int, shape (3, n_triplets)
+          Array of triplets of unique node indices. Each column corresponds to
+          a triplet (A, B, C) forming a candidate C1 continuity constraint.
+      
+      Notes
+      -----
+      - Handles corner and edge nodes correctly, discarding invalid triplets.
+      - Ensures that each triplet respects mesh topology and lattice boundaries.
+
+  >>> make_C1_eqs(
+    mesh: volVIC.Mesh.Mesh,
+    C1_inds: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
+    threshold: float = 0.1,
+    field_size: int = 3,
+    verbose: bool = True
+) -> scipy.sparse._matrix.spmatrix
+      Generate sparse C1 continuity equations for a multipatch or lattice mesh.
+      
+      Constructs a sparse matrix encoding C1 continuity constraints between triplets
+      of nodes in the mesh. Each row corresponds to one triplet `(A, B, C)` with
+      the equation `A - 2*B + C = 0` for enforcing smoothness.
+      
+      Parameters
+      ----------
+      mesh : Mesh
+          Multipatch B-spline mesh providing:
+          - unique control points (`mesh.unique_ctrl_pts`)
+          - patch topology (`mesh.connectivity`)
+      C1_inds : None, {"auto", "none", "all"} or ndarray of int, optional
+          Selection mode for C1 triplets:
+          - `None` or `"auto"`: automatically select triplets based on geometry.
+            Triplets already close to C1 continuity are preserved.
+          - `"none"`: do not generate any C1 constraint.
+          - `"all"`: enforce C1 continuity on all valid triplets.
+          - `ndarray`:
+              * shape `(n_nodes,)`: select triplets whose middle node `B`
+                belongs to the given unique node indices.
+              * shape `(3, n_triplets)`: explicit `(A, B, C)` triplets.
+      threshold : float, optional
+          Relative geometric tolerance used in `"auto"` mode.
+      
+          For each triplet `(A, B, C)`, the quantity::
+      
+              rhs = ||A - 2 B + C||
+      
+          is compared to the upper bound::
+      
+              up_bound = ||B - A|| + ||C - B||
+      
+          The triplet is kept if::
+      
+              rhs <= threshold * up_bound
+      
+          Default is `0.1` (10%).
+      field_size : int, optional
+          Size of the field on which C1 continuity is enforced:
+          - `1` for scalar fields
+          - `3` for vector fields
+          - etc.
+      
+          The constraint matrix is expanded block-diagonally accordingly.
+          Default is `3`.
+      verbose : bool, optional
+          If `True`, print information about selected triplets and modes.
+          Default is `True`.
+      
+      Returns
+      -------
+      scipy.sparse.spmatrix
+          Sparse constraint matrix of shape::
+      
+              (n_triplets * field_size,
+               n_unique_nodes * field_size)
+      
+          Each block row encodes the equation `A - 2 B + C = 0`.
+      
+      Raises
+      ------
+      ValueError
+          If `C1_inds` has an unsupported shape or an unknown mode is provided.
+      
+      Notes
+      -----
+      - Constraints are built on **unique control points**, not per-patch DOFs.
+      - Vector-valued fields are handled by block-diagonal duplication.
+      - Intended for C1 regularization in volume-based virtual image correlation
+        (volVIC) and related inverse problems.

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "volVIC"
+version = "1.0.0"
+description = "VOLume-based Virtual Image Correlation (volVIC) library for Python"
+readme = "README.md"
+requires-python = ">=3.9"
+
+authors = [
+    { name = "Dorian Bichet", email = "dbichet@insa-toulouse.fr" }
+]
+
+license = "CECILL-2.1"
+
+dependencies = [
+    "numpy>=1.20",
+    "numba>=0.55",
+    "scipy>=1.8",
+    "pyvista>=0.41",
+    "meshio>=5.0",
+    "matplotlib>=3.5",
+    "tqdm>=4.60",
+    "interpylate>=1.0.0",
+    "treeIDW>=1.0.0",
+    "bsplyne>=1.0.5",
+    "IGA_for_bsplyne>=1.0.2"
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Intended Audience :: Science/Research"
+]
+
+[project.urls]
+Homepage = "https://github.com/Dorian210/volVIC"
+Repository = "https://github.com/Dorian210/volVIC"
+Issues = "https://github.com/Dorian210/volVIC/issues"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "twine",
+    "pytest"
+]
+docs = [
+    "wkhtmltopdf",
+    "pdoc>=12.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

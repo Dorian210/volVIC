@@ -1,13 +1,13 @@
 from typing import Iterable
 import numpy as np
 import scipy.sparse as sps
-from volVIC.VirtualImageCorrelationEnergyElem import (
+from volVIC.virtual_image_correlation_energy import (
     VirtualImageCorrelationEnergyElem,
     plot_last_profile,
     compute_image_energy_operators,
 )
 from volVIC.Mesh import Mesh
-from sksparse.cholmod import cholesky
+from IGA_for_bsplyne import solve_sparse
 
 
 def iteration(
@@ -64,7 +64,7 @@ def iteration(
     -----
     The function assembles and solves the following linearized system:
 
-        H_tot * Δu = -grad_tot
+        H_tot @ Δu = -grad_tot
 
     where
         grad_tot = Cᵀ (grad + w_mem * K_mem * u)
@@ -93,10 +93,7 @@ def iteration(
         dof = np.linalg.solve(H_tot, -grad_tot)
     else:
         H_tot = C.T @ H @ C + membrane_weight * (C.T @ membrane_K @ C)
-        factor = cholesky(H_tot)
-        dof = factor(-grad_tot)
-    factor = cholesky(H_tot)
-    dof = factor(-grad_tot)
+        dof = solve_sparse(H_tot, -grad_tot)
     du_field = (C @ dof).reshape(u_field.shape)
     drho = -dE_drho / d2E_drho2
     return du_field, drho

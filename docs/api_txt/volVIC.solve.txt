@@ -1,0 +1,68 @@
+MODULE: volVIC.solve
+====================
+Documentation for module volVIC.solve
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> iteration(
+    u_field: numpy.ndarray[numpy.floating],
+    rho: float,
+    mesh: volVIC.Mesh.Mesh,
+    image_energies: Iterable[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    image: numpy.ndarray,
+    membrane_K: scipy.sparse._matrix.spmatrix,
+    membrane_weight: float,
+    C: scipy.sparse._matrix.spmatrix,
+    verbose: bool = True,
+    disable_parallel: bool = False
+)
+      Perform one iteration of the Virtual Image Correlation (VIC) energy minimization algorithm.
+      
+      This function updates the displacement field and the virtual image parameter by solving
+      a linearized system derived from the total energy, which combines the image correlation energy
+      and an intrapatch membrane regularization. Dirichlet and interpatch C¹ constraints are imposed
+      through the constraint matrix `C`.
+      
+      Parameters
+      ----------
+      u_field : np.ndarray[np.floating]
+          Current displacement field defined at the mesh control points.
+      rho : float
+          Current virtual image parameter controlling the gray-level transformation.
+      mesh : Mesh
+          Geometric mesh to be deformed during the optimization.
+      image_energies : Iterable[VirtualImageCorrelationEnergyElem]
+          Collection of patchwise virtual image correlation energy elements.
+      image : np.ndarray
+          Real image (experimental or reference) to which the virtual image is fitted.
+      membrane_K : scipy.sparse.spmatrix
+          Sparse matrix representing the intrapatch membrane stiffness operator.
+      membrane_weight : float
+          Weight factor applied to the membrane regularization term.
+      C : scipy.sparse.spmatrix
+          Constraint matrix enforcing Dirichlet and C¹ coupling conditions.
+      verbose : bool, optional
+          If True, display intermediate energy values and diagnostic plots. Default is True.
+      disable_parallel : bool, optional
+          If True, disable parallel computation during energy operator evaluation. Default is False.
+      
+      Returns
+      -------
+      du_field : np.ndarray
+          Increment of the displacement field obtained from the linearized system.
+      drho : float
+          Increment of the virtual image parameter corresponding to intensity adaptation.
+      
+      Notes
+      -----
+      The function assembles and solves the following linearized system:
+      
+          H_tot @ Δu = -grad_tot
+      
+      where
+          grad_tot = Cᵀ (grad + w_mem * K_mem * u)
+          H_tot    = Cᵀ (H + w_mem * K_mem) C
+      
+      The scalar parameter increment Δρ is computed independently as:
+      
+          Δρ = - (∂E/∂ρ) / (∂²E/∂ρ²)

@@ -1,0 +1,601 @@
+MODULE: volVIC.virtual_image_correlation_energy
+===============================================
+Documentation for module volVIC.virtual_image_correlation_energy
+
+CLASS: VirtualImageCorrelationEnergyElem
+-----------------------------------------
+Class representing the elementary VIC energy computation over a B-spline patch in
+isoparametric space.
+
+This class encapsulates the setup and evaluation of the Virtual Image Correlation (VIC)
+energy, including the construction of integration points and operators for a normal
+neighborhood of a B-spline surface. It provides methods to compute the energy, its gradient,
+and Hessian with respect to both the B-spline control point displacements and the virtual
+image parameter, as well as utilities for interpolation and residual computation.
+
+Attributes
+----------
+spline : BSpline
+    The `BSpline` surface object defining the isoparametric space and mapping.
+ctrl_pts : np.ndarray[np.floating]
+    The control points of the `BSpline` surface, as a `numpy` array of shape (3, N_xi, N_eta).
+virtual_image : Callable[[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], float], tuple[np.ndarray[np.floating], np.ndarray[np.floating]]]
+    Function to compute the virtual image and its derivative with respect to `rho`.
+h : float
+    Half width of the normal neighborhood.
+xi : np.ndarray[np.floating]
+    Integration points in the `xi` isoparametric direction.
+dxi : np.ndarray[np.floating]
+    Weights of the integration points in the `xi` isoparametric direction.
+eta : np.ndarray[np.floating]
+    Integration points in the `eta` isoparametric direction.
+deta : np.ndarray[np.floating]
+    Weights of the integration points in the `eta` isoparametric direction.
+gamma : np.ndarray[np.floating]
+    Integration points along the normal direction of the B-spline.
+dgamma : np.ndarray[np.floating]
+    Weights of the integration points along the normal direction.
+Xv0 : np.ndarray[np.floating]
+    Flattened coordinates of the reference points in the normal neighborhood.
+Uv_p : sps.spmatrix
+    Sparse linear operator mapping control point displacements to displacements of points in
+    the normal neighborhood.
+wdetJs : np.ndarray[np.floating]
+    xi and eta quadrature weights scaled by the surface Jacobian determinant.
+wdetJ : np.ndarray[np.floating]
+    xi, eta and gamma quadrature weights scaled by the surface Jacobian determinant.
+
+Notes
+-----
+- Integration points and weights in the isoparametric space and along the normal direction
+are computed automatically.
+- The `virtual_image` function must return a tuple (`g`, `g_prime`), where `g` is the virtual
+image and `g_prime` its derivative with respect to `rho`.
+- Methods are provided for generating integration grids, constructing displacement operators,
+interpolating image values, evaluating the virtual image, computing residuals, and assembling
+the VIC energy and its derivatives.
+
+  >>> __init__(
+    self,
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    surf_dx: float,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]],
+    width_dx: float,
+    h: float,
+    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>
+)
+      Initialize a `VirtualImageCorrelationEnergyElem` object for VIC energy computation over a
+      B-spline surface.
+      
+      This constructor sets up the isoparametric space, integration points, and operators
+      required for evaluating the VIC energy in a normal neighborhood of the B-spline surface.
+      It allows customization of the integration grid and the virtual image model.
+      
+      Parameters
+      ----------
+      spline : BSpline
+          The `BSpline` surface object defining the isoparametric space and mapping.
+      ctrl_pts : np.ndarray[np.floating]
+          The control points of the `BSpline` surface, as a `numpy` array of shape
+          (3, N_xi, N_eta).
+      surf_dx : float
+          Target mapped distance between integration points in the isoparametric directions.
+      alpha : Union[float, tuple[tuple[float, float], tuple[float, float]]]
+          Distance to ignore on the border of the patch in each isoparametric direction.
+          If a `float`, the same value is used for all boundaries.
+          If a tuple of tuples, ((`dist_xi_0`, `dist_xi_1`), (`dist_eta_0`, `dist_eta_1`)),
+          each value specifies the ignored distance at the corresponding boundary.
+      width_dx : float
+          Target mapped distance between integration points along the normal direction.
+      h : float
+          Half-width of the neighborhood along the normal direction.
+      virtual_image : Callable[[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], float], tuple[np.ndarray[np.floating], np.ndarray[np.floating]]], optional
+          Function to compute the virtual image and its derivative with respect to `rho`.
+          By default, `g_slide_g_prime`.
+      
+      Notes
+      -----
+      - The integration points and weights in the isoparametric space and along the normal
+      direction are computed automatically.
+      - The `virtual_image` function must return a tuple (`g`, `g_prime`), where `g` is the
+      virtual image and `g_prime` its derivative with respect to `rho`.
+
+  >>> rigid_body_copy(self, new_ctrl_pts: numpy.ndarray[numpy.floating])
+
+  >>> make_intg_space(
+    self,
+    surf_dx: float,
+    padding: Union[float, tuple[tuple[float, float], tuple[float, float]]],
+    width_dx: float,
+    h: float,
+    eps: float = 1e-06
+) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+      Generate integration points and weights in the parametric space and along the normal direction for VIC computation.
+      
+      This method returns arrays of integration points and their corresponding weights in the parametric directions (`xi`, `eta`)
+      of the `BSpline` surface, and along the normal direction (`gamma`). Parametric points are distributed so that the mapped distance
+      between them is close to `surf_dx`, with optional border padding specified by `padding`.
+      
+      Along the normal direction (`gamma`), the interval `[-h, h]` is discretized using a midpoint rule with spacing close to `width_dx`.
+      Two additional points are inserted symmetrically near zero at `-eps` and `+eps` to reduce potential invariance issues with respect to `rho`.
+      Weights `dgamma` are adjusted so that the sum remains exactly `2*h`, preserving the midpoint rule.
+      
+      Parameters
+      ----------
+      surf_dx : float
+          Target mapped distance between integration points in the parametric directions.
+      padding : Union[float, tuple[tuple[float, float], tuple[float, float]]]
+          Distance to ignore at the patch boundaries. If a float, the same value is applied to all boundaries.
+          If a tuple of tuples, ((dist_xi_0, dist_xi_1), (dist_eta_0, dist_eta_1)), each value specifies the ignored distance at the corresponding boundary.
+      width_dx : float
+          Target spacing between integration points along the normal direction.
+      h : float
+          Half-width of the neighborhood along the normal direction.
+      eps : float, optional
+          Small offset used to insert two additional points near zero (-eps and +eps). Default is 1e-6.
+      
+      Returns
+      -------
+      (xi, eta, gamma) : tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+          Integration points in the parametric directions and along the normal direction.
+      (dxi, deta, dgamma) : tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+          Integration weights corresponding to the points in `xi`, `eta`, and `gamma`.
+      
+      Notes
+      -----
+      - Parametric points are computed using `linspace_for_VIC_elem`.
+      - The normal direction uses a midpoint rule with uniform spacing, except near zero where ±eps points are inserted.
+      - The sum of `dgamma` always equals `2*h`.
+
+  >>> make_operators(
+    self
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+      Construct a linearized displacement operator and compute the initial position
+      of a set of points in a normal neighborhood of the B-spline surface.
+      
+      This operator allows exploring a tubular neighborhood of the surface by
+      linearly extrapolating points along the local normal direction.
+      
+      The displacement of a point at a signed normal distance γ from the surface is given by:
+      
+          u_v(ξ, η, γ) = u(ξ, η) + γ * (Φ(ξ, η) × a₃(ξ, η))
+      
+          Φ = φ₁ a₁ + φ₂ a₂
+      
+          φ₁ =  du/dη · a₃ / ||a₁ × a₂||
+          φ₂ = -du/dξ · a₃ / ||a₁ × a₂||
+      
+      where:
+          - u is the displacement of the surface,
+          - a₁, a₂ are the tangents to the surface,
+          - a₃ = (a₁ × a₂) / ||a₁ × a₂|| is the surface normal (normalized),
+          - γ is the signed distance along the normal.
+      
+      The operator computed here linearly maps control point displacements to displacements
+      of γ-sampled points along the normal.
+      
+      Returns
+      -------
+      Xv0 : np.ndarray[np.floating]
+          Flattened coordinates of the points in the reference configuration,
+          located along the normal at a signed distance γ from the surface.
+          Flattened array of shape (3 * n_points,)
+      Uv_p : sps.spmatrix
+          Sparse linear operator that maps displacements at control points
+          to displacements of the corresponding points in the normal neighborhood.
+          Sparse matrix of shape (3 * n_points, 3 * n_ctrl_pts).
+      wdetJs : np.ndarray[np.floating]
+          xi and eta quadrature weights scaled by the surface Jacobian determinant.
+          Array of shape (n_surf_points,)
+      wdetJ : np.ndarray[np.floating]
+          xi, eta and gamma quadrature weights scaled by the surface Jacobian determinant.
+          Array of shape (n_points,)
+
+  >>> f_df_dX(
+    self,
+    X: numpy.ndarray[numpy.floating],
+    image: numpy.ndarray
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix]
+      Interpolate the grey level values of a voxel-based `image` at specified coordinates `X` and compute the derivative
+      of the interpolation with respect to `X`.
+      
+      Parameters
+      ----------
+      X : np.ndarray[np.floating]
+          Coordinates of the evaluation points as continuous pixel indices, flattened as
+          `[x_0, ..., x_n, y_0, ..., y_n, z_0, ..., z_n]`.
+      image : np.ndarray
+          Voxel-based image (volume) in which the transition area is searched.
+      
+      Returns
+      -------
+      f : np.ndarray[np.floating]
+          Array of grey levels of the `image` interpolated at the coordinates specified by `X`.
+      df_dX : sps.spmatrix
+          Sparse matrix representing the derivative of the grey level interpolation with respect to
+          the integration point coordinates `X`.
+      
+      Notes
+      -----
+      - The interpolation and its gradient are computed using the internal `TriLinearRegularGridInterpolator`.
+      - The returned `df_dX` is a sparse matrix with block-diagonal structure, where each block corresponds to the partial
+      derivatives with respect to `x`, `y`, and `z` coordinates.
+
+  >>> g_dg_drho(
+    self,
+    rho: float
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+      Evaluate the virtual image and its derivative with respect to `rho` at the
+      integration points in the isoparametric space and along the normal direction.
+      
+      Parameters
+      ----------
+      rho : float
+          Parameter of the virtual image.
+      
+      Returns
+      -------
+      g : np.array of float
+          Virtual image at the integration points.
+      dg_drho : np.array of float
+          Derivative of the virtual image with respect to `rho` at the integration points.
+      
+      Notes
+      -----
+      - The integration points are defined by the arrays `xi`, `eta`, and `gamma` in the
+      isoparametric space and along the normal direction.
+      - The `virtual_image` function must return a tuple (`g`, `g_prime`), where `g` is
+      the virtual image and `g_prime` its derivative with respect to `rho`.
+
+  >>> r_dr_dg_dr_df(
+    self,
+    g: numpy.ndarray[numpy.floating],
+    f: numpy.ndarray[numpy.floating]
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, scipy.sparse._matrix.spmatrix]
+      Compute the residual of the VIC problem and its derivatives with respect to the virtual image and
+      the image at the integration points in the isoparametric space and along the normal direction.
+      
+      Parameters
+      ----------
+      g : np.ndarray[np.floating]
+          Virtual image evaluated at the integration points (in the isoparametric space and along the
+          normal direction).
+      f : np.ndarray[np.floating]
+          Image evaluated at the integration points (in the isoparametric space and along the normal
+          direction).
+      
+      Returns
+      -------
+      r : np.ndarray[np.floating]
+          Residual of the VIC problem, i.e., `g - f`, flattened as a 1D array.
+      dr_dg : sps.spmatrix
+          Sparse identity matrix representing the derivative of the residual with respect to the virtual
+          image evaluation (`g`).
+      dr_df : sps.spmatrix
+          Sparse negative identity matrix representing the derivative of the residual with respect to the
+          image evaluation (`f`).
+      
+      Notes
+      -----
+      - The input arrays `g` and `f` are reshaped internally to match the integration grid defined by (`xi`, `eta`, `gamma`).
+      - The returned derivatives are sparse matrices of shape (`n_points`, `n_points`), where `n_points` is the total number of integration points.
+
+  >>> E_dE_du_d2E_du2_dE_drho_d2E_drho2(
+    self,
+    u: numpy.ndarray[numpy.floating],
+    rho: float,
+    image: numpy.ndarray
+) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+      Compute the VIC energy, its gradient, and Hessian with respect to the B-spline control point displacements (`u`)
+      and the virtual image parameter (`rho`).
+      
+      This method evaluates the energy functional by integrating the squared residual between the virtual image and the
+      interpolated voxel-based `image` over the B-spline surface space and along the normal direction.
+      It also computes the first and second derivatives of the energy with respect to both `u` and `rho`.
+      
+      Parameters
+      ----------
+      u : np.ndarray[np.floating]
+          Displacements of the B-spline control points in the isoparametric space.
+          Should be a 1D array of length `3 * n_ctrl_pts`.
+      rho : float
+          Virtual image parameter.
+      image : np.ndarray
+          Voxel-based image (volume) on which the surface fitting is performed.
+      
+      Returns
+      -------
+      E : float
+          Value of the VIC energy for the current parameters.
+      dE_du : np.ndarray[np.floating]
+          Gradient of the energy with respect to the control point displacements (`u`).
+          1D array of length `3 * n_ctrl_pts`.
+      d2E_du2 : sps.spmatrix
+          Sparse Hessian matrix of the energy with respect to the control point displacements (`u`).
+          Shape: (`3 * n_ctrl_pts`, `3 * n_ctrl_pts`).
+      dE_drho : float
+          First derivative (scalar) of the energy with respect to the virtual image parameter (`rho`).
+      d2E_drho2 : float
+          Second derivative (scalar) of the energy with respect to the virtual image parameter (`rho`).
+      
+      Notes
+      -----
+      - The energy is computed as `0.5 * sum(r**2 * wdetJ)`, where `r` is the residual between the virtual image and the interpolated image,
+      and `wdetJ` are the quadrature weights scaled by the Jacobian determinant to ensure integrating on the surface.
+      - The gradient and Hessian are assembled using the chain rule, leveraging the derivatives of the residual with respect to both
+      the B-spline control point displacements and the virtual image parameter.
+      - Intermediate results (`r`, `f`, `g`, `rho`) are stored as attributes (`last_saved_r`, `last_saved_f`, `last_saved_g`, `last_saved_rho`)
+      for potential later use.
+
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> make_image_energies(
+    mesh: volVIC.Mesh.Mesh,
+    h: float,
+    width_dx: float = 0.5,
+    surf_dx: float = 1,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
+    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
+      Initialize surface-based Virtual Image Correlation (VIC) energy elements
+      for a multipatch B-spline mesh.
+      
+      This function constructs one :class:`VirtualImageCorrelationEnergyElem`
+      instance per patch of the input mesh. For each patch, it computes the
+      operators required for surface-based VIC, initializes the integration
+      points and weights, and stores all auxiliary data needed for subsequent
+      global assembly.
+      
+      If `mesh` is a :class:`MeshLattice`, the computation is performed **only on
+      the reference cell**, assuming periodic repetition of identical spline
+      definitions across the lattice. The resulting energy elements can then be
+      reused for all lattice cells.
+      
+      Parameters
+      ----------
+      mesh : Mesh or MeshLattice
+          B-spline multipatch mesh on which the VIC energy elements are built.
+          For a :class:`MeshLattice`, only the reference cell is processed.
+      
+      h : float
+          Regularization or smoothing parameter passed to the virtual image
+          function.
+      
+      width_dx : float, optional
+          Target spacing used for the discretization along the surface width
+          direction.
+          Default is `0.5`.
+      
+      surf_dx : float, optional
+          Target spacing used for the discretization along the surface
+          parametric directions.
+          Default is `1`.
+      
+      alpha : Union[float, tuple[tuple[float, float], tuple[float, float]]], optional
+          Ignored distance on the patch boundaries in parametric space.
+          If a float, the same value is applied to all boundaries.
+          If a tuple of tuples,
+          ((`xi_min`, `xi_max`), (`eta_min`, `eta_max`)),
+          values are specified independently for each boundary.
+          Default is `0.0`.
+      
+      virtual_image : callable, optional
+          Virtual image function defining the image intensity and its spatial
+          derivatives.
+          It must have the signature
+          `(xi, eta, gamma, rho) -> (I, dI_drho)`,
+          where `I` is the image value and `dI_drho` its derivative wrt `rho`.
+          Default is :func:`g_slide`.
+      
+      verbose : bool, optional
+          If `True`, prints progress and diagnostic information during the
+          construction of the energy elements.
+          Default is `True`.
+      
+      disable_parallel : bool, optional
+          If `True`, disables parallel execution of patch-wise computations.
+          Default is `False`.
+      
+      Returns
+      -------
+      energies : list of VirtualImageCorrelationEnergyElem
+          List of initialized VIC energy elements, one per patch.
+      
+      Notes
+      -----
+      - The computation is patch-wise and can be executed in parallel.
+      - Intended for use in surface-based Virtual Image Correlation workflows.
+
+  >>> plot_last_profile(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
+)
+      Plot mean graylevel profiles and inter-/intra-patch standard deviations
+      along the normal direction of the surface.
+      
+      This function post-processes a list of
+      :class:`VirtualImageCorrelationEnergyElem` objects and visualizes the
+      graylevel profiles stored in their ``saved_data`` from the **last VIC
+      evaluation**. Statistics are computed patch-wise and then aggregated
+      over the surface using area-weighted averages.
+      
+      For each value of the normal coordinate ``gamma``, the function computes:
+      - the global (area-weighted) mean profiles,
+      - the inter-patch standard deviation (variability between patches),
+      - the intra-patch standard deviation (variability within patches).
+      
+      Two stacked plots are produced:
+      - **Top**: inter-patch standard deviation,
+      - **Bottom**: intra-patch standard deviation.
+      
+      Parameters
+      ----------
+      image_energies : list of VirtualImageCorrelationEnergyElem
+          List of initialized VIC energy elements containing saved quantities
+          from the last image correlation evaluation. Each element must provide
+          the following attributes:
+          - ``gamma`` : 1D array of normal coordinates,
+          - ``wdetJs`` : integration weights,
+          - ``saved_data`` with keys ``"last_saved_g"``,
+            ``"last_saved_f"``, and ``"last_saved_r"``.
+      
+      Notes
+      -----
+      - Patch contributions are weighted by their surface area.
+      - ``g`` denotes the reference graylevel profile : the virtual image.
+      - ``f`` denotes the observed graylevel profile in the surface neighborhood.
+      - ``r`` denotes the graylevel residual.
+
+  >>> compute_image_energy_operators(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    mesh: volVIC.Mesh.Mesh,
+    image: numpy.ndarray,
+    u_field: numpy.ndarray[numpy.floating],
+    rho: float,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+      Evaluate image energy and assemble first- and second-order operators
+      for a multipatch B-spline mesh.
+      
+      This function evaluates the surface-based Virtual Image Correlation (VIC)
+      energy on each patch of the mesh and assembles the resulting contributions
+      into global quantities. For each patch, the following quantities are
+      computed:
+      - image energy,
+      - gradient with respect to the displacement field,
+      - Gauss-Newton approximation of the Hessian,
+      - first and second derivatives with respect to the scalar parameter `rho`.
+      
+      Patch-wise computations are performed independently and can be executed
+      in parallel. Patch-level operators are then assembled into global vectors
+      and matrices using the mesh connectivity.
+      
+      Parameters
+      ----------
+      image_energies : list of VirtualImageCorrelationEnergyElem
+          List of initialized VIC energy elements, one per patch.
+      
+      mesh : Mesh
+          Multipatch B-spline mesh used to assemble global operators.
+      
+      image : np.ndarray
+          3D graylevel-based image containing the features to be fitted.
+          The Virtual Image Correlation (VIC) energy defines a cost function
+          that quantifies how well the deformed mesh matches these image
+          features.
+      
+      u_field : np.ndarray[np.floating]
+          Global displacement field defined at the unique control points of
+          the mesh. It is internally expanded to patch-wise (separated)
+          representations.
+      
+      rho : float
+          Scalar parameter passed to the virtual image model.
+      
+      verbose : bool, optional
+          If `True`, prints progress information during patch-wise evaluation.
+          Default is `True`.
+      
+      disable_parallel : bool, optional
+          If `True`, disables parallel execution of patch-wise computations.
+          Default is `False`.
+      
+      Returns
+      -------
+      E : float
+          Total image energy summed over all patches.
+      
+      grad : np.ndarray[np.floating]
+          Assembled global gradient of the image energy with respect to the
+          displacement field.
+      
+      H : scipy.sparse.spmatrix
+          Assembled global Gauss-Newton Hessian of the image energy with respect
+          to the displacement field.
+      
+      dE_drho : float
+          First derivative of the total image energy with respect to `rho`.
+      
+      d2E_drho2 : float
+          Second derivative of the total image energy with respect to `rho`.
+      
+      Notes
+      -----
+      - The Hessian corresponds to a Gauss-Newton approximation.
+      - Patch-level auxiliary data stored in ``image_energy.saved_data`` are
+        updated during evaluation and can be used for post-processing.
+      - Global assembly is handled through the mesh connectivity.
+
+  >>> compute_distance_field_patch(
+    image_energy,
+    f: numpy.ndarray[numpy.floating],
+    rho: float,
+    max_iter: int = 20
+) -> numpy.ndarray[numpy.floating]
+      Calculate the distance between the target profile and the real profiles
+      in the image using Gauss-Newton optimization method.
+      
+      Parameters
+      ----------
+      f : np.ndarray[np.floating]
+          Real image profiles to compare with the target profile.
+      rho : float
+          Parameter of the virtual image.
+      eps : float, optional
+          Tolerance for convergence, by default 1e-3.
+      max_iter : int, optional
+          Maximum number of iterations, by default 20.
+      
+      Returns
+      -------
+      d : np.ndarray[np.floating]
+          Displacement field representing the difference between real and target profiles.
+
+  >>> compute_distance_field(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    saved_data: list[dict[str, numpy.ndarray[numpy.floating]]] = None,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> list[numpy.ndarray[numpy.floating]]
+      Compute the distance field between real image profiles and target virtual
+      profiles for a set of VIC energy elements.
+      
+      This function evaluates, for each patch, the displacement field `d` that
+      minimizes the difference between the real profiles stored in the image
+      and the virtual profiles defined by the energy element. A Gauss-Newton
+      iterative method is used along the normal direction (gamma) to compute
+      the per-patch distance field.
+      
+      Parameters
+      ----------
+      image_energies : list of VirtualImageCorrelationEnergyElem
+          List of VIC energy elements, one per patch.
+      saved_data : list of dict, optional
+          List of dictionaries containing the saved image profiles for each
+          patch. Expected keys include `'last_saved_f'` and `'last_saved_rho'`.
+          If `None`, uses the `saved_data` attribute from each energy element.
+      verbose : bool, optional
+          If `True`, prints progress information.
+          Default is `True`.
+      disable_parallel : bool, optional
+          If `True`, disables parallel execution.
+          Default is `False`.
+      max_iter : int, optional
+          Maximum number of Gauss-Newton iterations per patch.
+          Default is `20`.
+      
+      Returns
+      -------
+      distances : list of np.ndarray
+          List of per-patch displacement fields representing the distance
+          between real and target profiles along the normal direction.
+      
+      Notes
+      -----
+      - The displacement is clamped to the range [-h, h], where `h` is half width
+        of search for the virtual image corellation.
+      - Computation is patch-wise and can be parallelized using `parallel_blocks`.

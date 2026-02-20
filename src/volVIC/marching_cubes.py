@@ -424,14 +424,14 @@ def marching_cubes(volume: np.ndarray, threshold: float) -> io.Mesh:
     stl_mc = io.Mesh(points=verts, cells={"triangle": faces})
     return stl_mc
 
-if __name__=='__main__':
-    from skimage.io import imread
-    volume = imread("/home-local/dbichet/Documents/These/code/VolVIC/exemples/metalic_BCC_traction/SlicesY-Lattice_BCC_traction_binned.tiff") # 
-    threshold = 21472.413169028445
-    stl_mc = marching_cubes(volume, threshold)
+# if __name__=='__main__':
+#     from skimage.io import imread
+#     volume = imread("/home-local/dbichet/Documents/These/code/VolVIC/exemples/metalic_BCC_traction/SlicesY-Lattice_BCC_traction_binned.tiff") # 
+#     threshold = 21472.413169028445
+#     stl_mc = marching_cubes(volume, threshold)
     
-    import pyvista as pv
-    mesh = pv.from_meshio(stl_mc)
-    mesh.plot(show_edges=True)
+#     import pyvista as pv
+#     mesh = pv.from_meshio(stl_mc)
+#     mesh.plot(show_edges=True)
 
 # %%

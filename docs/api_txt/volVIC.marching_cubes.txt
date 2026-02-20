@@ -1,0 +1,35 @@
+MODULE: volVIC.marching_cubes
+=============================
+Documentation for module volVIC.marching_cubes
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> marching_cubes_nb(volume: numpy.ndarray, threshold: float)
+
+  >>> marching_cubes(volume: numpy.ndarray, threshold: float) -> meshio._mesh.Mesh
+      Extract an isosurface from a 3D scalar field using the Marching Cubes algorithm 
+      and return it as a `meshio.Mesh` object.
+      
+      This function calls `marching_cubes_nb`, a Numba-compiled routine that performs the core computations, 
+      including vertex deduplication and triangle generation.
+      
+      Parameters
+      ----------
+      volume : np.ndarray
+          3D scalar field array with shape (Z, Y, X). Values of any type comparable to `threshold` 
+          can be processed without copying the data.
+      threshold : float
+          Iso-value used to extract the surface. Voxels with values >= `threshold` are considered inside.
+      
+      Returns
+      -------
+      io.Mesh
+          Triangle mesh where `points` is an array of shape (N, 3) and `cells` contains a `"triangle"` 
+          entry with indices into `points`.
+      
+      Notes
+      -----
+      - The function avoids memory-expensive copies of the input volume.
+      - Vertex and face generation is delegated to a Numba-compiled routine.
+      - To prevent the creation of zero-area triangles, vertex coordinates are slightly offset 
+        (by 1e-5) from voxel centers.

@@ -1,0 +1,766 @@
+================================================================
+FULL API DOCUMENTATION: VOLVIC
+================================================================
+
+
+
+MODULE: volVIC
+==============
+.. include:: ../../README.md
+
+################################################################
+MODULE: volVIC.C1_triplets
+==========================
+Documentation for module volVIC.C1_triplets
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> recover_nodes_couples_from_unique_inds(
+    unique_nodes_inds: numpy.ndarray[numpy.integer]
+) -> numpy.ndarray[numpy.integer]
+
+  >>> get_all_triplets(
+    unique_nodes_inds: numpy.ndarray[numpy.integer],
+    shape_by_patch: numpy.ndarray[numpy.integer]
+) -> numpy.ndarray[numpy.integer]
+
+  >>> make_C1_eqs(
+    mesh: volVIC.Mesh.Mesh,
+    C1_inds: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
+    threshold: float = 0.1,
+    field_size: int = 3,
+    verbose: bool = True
+) -> scipy.sparse._matrix.spmatrix
+
+################################################################
+MODULE: volVIC.Mesh
+===================
+Documentation for module volVIC.Mesh
+
+CLASS: Mesh
+------------
+Represents a multi-patch B-spline mesh.
+
+This class manages a multi-patch B-spline mesh, including control points,
+connectivity, evaluation, field propagation, and visualization. It supports
+both 2D and 3D meshes.
+
+Attributes
+----------
+connectivity : MultiPatchBSplineConnectivity
+    Multi-patch connectivity structure.
+splines : list[BSpline]
+    List of B-spline objects for each patch.
+unique_ctrl_pts : np.ndarray
+    Array of unique control points for the entire mesh.
+ref_inds : np.ndarray
+    Reference indices used for linking to submeshes.
+
+  >>> __init__(
+    self,
+    splines: list[bsplyne.b_spline.BSpline],
+    ctrl_pts: Union[list[numpy.ndarray[numpy.floating]], numpy.ndarray[numpy.floating]],
+    connectivity: Optional[bsplyne.multi_patch_b_spline.MultiPatchBSplineConnectivity] = None,
+    ref_inds: Optional[numpy.ndarray[numpy.integer]] = None
+)
+
+  >>> show(self)
+
+  >>> save(self, filename: str)
+
+  >>> load(filename: str) -> volVIC.Mesh.Mesh
+
+  >>> separated_to_unique(self, field, method=None)
+
+  >>> unique_to_separated(self, field)
+
+  >>> get_separated_ctrl_pts(self) -> list[numpy.ndarray[numpy.floating]]
+
+  >>> set_separated_ctrl_pts(self, separated_ctrl_pts: list[numpy.ndarray[numpy.floating]])
+
+  >>> __call__(
+    self,
+    XI: Iterable[tuple[numpy.ndarray[numpy.floating], ...]],
+    k: Union[Iterable[Union[int, tuple[int, ...]]], int] = 0,
+    data: Union[numpy.ndarray, Iterable[numpy.ndarray]] = None
+) -> list
+
+  >>> assemble_grads(self, terms: list[numpy.ndarray], field_size: int) -> numpy.ndarray
+
+  >>> assemble_hessians(
+    self,
+    terms: list[scipy.sparse._matrix.spmatrix],
+    field_size: int
+) -> scipy.sparse._matrix.spmatrix
+
+  >>> extract_border(self) -> volVIC.Mesh.Mesh
+
+  >>> subset(self, patchs_to_keep: numpy.ndarray[numpy.integer]) -> volVIC.Mesh.Mesh
+
+  >>> propagate_field(
+    self,
+    field_values: numpy.ndarray[numpy.floating],
+    indices: numpy.ndarray[numpy.integer],
+    disable_parallel: bool = False
+) -> numpy.ndarray[numpy.floating]
+
+  >>> propagate_field_from_submesh(
+    self,
+    submesh: volVIC.Mesh.Mesh,
+    field_values: numpy.ndarray[numpy.floating],
+    disable_parallel: bool = False
+) -> numpy.ndarray[numpy.floating]
+
+  >>> get_orientation_field(
+    self,
+    n_eval_per_elem: int = 5,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> list[numpy.ndarray[numpy.floating]]
+
+  >>> correct_orientation(
+    self,
+    separated_fields: list = [],
+    axis: int = 2,
+    verbose: bool = True,
+    disable_parallel: bool = False
+)
+
+  >>> plot_orientation(
+    self,
+    n_eval_per_elem: Union[int, Iterable[int]] = 5,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    verbose: bool = True,
+    disable_parallel: bool = False,
+    **kwargs
+) -> pyvista.plotting.plotter.Plotter
+
+  >>> plot(
+    self,
+    n_eval_per_elem: Union[int, Iterable[int]] = 10,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    unique_field: Optional[numpy.ndarray] = None,
+    separated_field: Union[list[numpy.ndarray], list[callable], NoneType] = None,
+    interior_only: bool = True,
+    plt_ctrl_mesh: bool = False,
+    verbose: bool = True,
+    disable_parallel: bool = False,
+    pv_plotter: Optional[pyvista.plotting.plotter.Plotter] = None,
+    show: bool = True,
+    elem_sep_color: str = 'black',
+    ctrl_poly_color: str = 'green',
+    **pv_add_mesh_kwargs
+)
+
+  >>> plot_in_image(
+    self,
+    image: numpy.ndarray,
+    threshold: Optional[float] = None,
+    threshold_method: Literal['otsu', 'interp'] = 'otsu',
+    mode: Literal['marching cubes', 'voxels'] = 'marching cubes',
+    n_eval_per_elem: Union[int, Iterable[int]] = 10,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    interior_only: bool = True,
+    plt_ctrl_mesh: bool = False,
+    verbose: bool = True,
+    disable_parallel: bool = False,
+    pv_plotter: Optional[pyvista.plotting.plotter.Plotter] = None,
+    show: bool = True,
+    image_show_edges: bool = False,
+    image_line_width: float = 0.05,
+    image_opacity: float = 0.85,
+    image_edge_color: str = 'black',
+    image_interior_color: str = 'white',
+    **pv_add_mesh_kwargs
+)
+
+  >>> ICP_rigid_body_transform(
+    self,
+    tgt_meshio: meshio._mesh.Mesh,
+    n_eval_per_elem: Union[int, Iterable[int]] = 5,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    plot_after: bool = True,
+    disable_parallel: bool = False
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float]
+
+  >>> distance_to_meshio(
+    self,
+    tgt_meshio: meshio._mesh.Mesh,
+    n_eval_per_elem: Union[int, Iterable[int]] = 5,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None
+) -> meshio._mesh.Mesh
+
+  >>> save_paraview(
+    self,
+    path: str,
+    name: str,
+    n_step: int = 1,
+    n_eval_per_elem: Union[int, Iterable[int]] = 10,
+    unique_fields: dict = {},
+    separated_fields: Optional[list[dict]] = None,
+    XI_list: Optional[Iterable[tuple[numpy.ndarray[numpy.floating], ...]]] = None,
+    groups: Optional[dict[str, dict[str, Union[str, int]]]] = None,
+    make_pvd: bool = True,
+    verbose: bool = True,
+    fields_on_interior_only: Union[bool, Literal['auto'], list[str]] = 'auto',
+    disable_parallel: bool = False
+)
+
+
+CLASS: MeshLattice
+-------------------
+Structured lattice mesh with an explicit reference B-spline cell.
+
+This class represents a *fully instantiated* multipatch B-spline mesh that
+exhibits a regular lattice structure obtained by repeating a reference cell
+along three directions. The lattice structure is described by the repetition
+counts `(l, m, n)`.
+
+The control points and connectivity describe the *entire lattice geometry*,
+exactly as in a standard :class:`Mesh`. In contrast, the `BSpline` instances
+correspond to a single reference cell and are reused for all lattice cells.
+
+`MeshLattice` therefore behaves as a standard :class:`Mesh`, while additionally
+storing lattice metadata and providing utilities to extract or operate on the
+reference cell only.
+
+This is a utility class, notably used to allow
+:func:`VirtualImageCorrelationEnergyElem.make_image_energies` and
+:func:`membrane_stiffness.make_membrane_stifness` to assemble
+operators on a single cell while exploiting lattice periodicity at the algebraic
+level.
+
+Attributes
+----------
+l : int
+    Number of repetitions of the reference cell along the first lattice
+    direction.
+m : int
+    Number of repetitions of the reference cell along the second lattice
+    direction.
+n : int
+    Number of repetitions of the reference cell along the third lattice
+    direction.
+
+Notes
+-----
+- The lattice geometry is assumed to be fully defined at construction time.
+- No geometric replication is performed internally.
+- All lattice cells share identical B-spline definitions.
+- The total number of patches is `l * m * n * nb_patchs_cell`.
+
+  >>> __init__(
+    self,
+    l: int,
+    m: int,
+    n: int,
+    splines_cell: list[bsplyne.b_spline.BSpline],
+    ctrl_pts: Union[list[numpy.ndarray[numpy.floating]], numpy.ndarray[numpy.floating]],
+    connectivity: Optional[bsplyne.multi_patch_b_spline.MultiPatchBSplineConnectivity] = None,
+    ref_inds: Optional[numpy.ndarray[numpy.integer]] = None
+)
+
+  >>> from_mesh(
+    cls,
+    mesh: volVIC.Mesh.Mesh,
+    l: int,
+    m: int,
+    n: int
+) -> volVIC.Mesh.MeshLattice
+
+  >>> get_mesh_cell_one(self) -> volVIC.Mesh.Mesh
+
+  >>> get_nb_patchs_cell(self) -> int
+
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> in_notebook() -> bool
+
+################################################################
+MODULE: volVIC.Problem
+======================
+Documentation for module volVIC.Problem
+
+CLASS: Problem
+---------------
+Virtual Image Correlation (VIC) problem definition and solver.
+
+This class encapsulates the full setup of a surface-based VIC problem:
+geometry, image model, regularization, constraints, and nonlinear solver.
+A typical workflow is:
+    1. Instantiate a Problem from a mesh and an image
+    2. Call `solve` to estimate the displacement field
+    3. Export results using `save_paraview` or propagate them to a volume mesh
+
+Attributes
+----------
+mesh : Mesh
+    Surface mesh used in the VIC problem.
+
+image : np.ndarray
+    Image converted to floating-point format for computations.
+
+fg, bg : float
+    Estimated or user-defined foreground and background gray levels.
+
+Rmat : np.ndarray
+    Rotation matrix resulting from ICP initialization.
+
+tvec : np.ndarray
+    Translation vector resulting from ICP initialization.
+
+image_energies : list[VirtualImageCorrelationEnergyElem]
+    Image energy elements used to assemble the VIC objective.
+
+constraints : DirichletConstraintHandler
+    Handler storing linear equality constraints (e.g. C¹ continuity).
+
+dirichlet : Dirichlet
+    Dirichlet constraint object derived from the constraint handler.
+
+membrane_K : scipy.sparse.spmatrix
+    Membrane stiffness matrix used for regularization.
+
+membrane_weight : float
+    Weight associated with the membrane regularization term.
+
+initial_rho : float
+    Initial value of the distance scaling parameter.
+
+saved_data_0 : list[dict[str, np.ndarray]]
+    Cached image energy data from the first iteration, used for
+    post-processing and visualization.
+
+  >>> __init__(
+    self,
+    mesh: volVIC.Mesh.Mesh,
+    image: numpy.ndarray[numpy.uint16],
+    ICP_init: bool = True,
+    reversed_normals: bool = False,
+    fg_bg: Optional[tuple[float, float]] = None,
+    fg_bg_method: Literal['otsu', 'interp'] = 'otsu',
+    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
+    h: Optional[float] = None,
+    width_dx: float = 2.0,
+    surf_dx: float = 1.0,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
+    C1_mode: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
+    membrane_weight: Optional[float] = None,
+    initial_rho: float = 5.0,
+    expected_mean_dist: float = 5.0,
+    n_intg_membrane_weight_comput: int = 100,
+    disable_parallel: bool = False,
+    verbose: bool = True
+)
+
+  >>> find_fg_bg(
+    self,
+    method: Literal['otsu', 'interp'] = 'otsu',
+    verbose: bool = True
+)
+
+  >>> initialize_h_mesh_ICP(
+    self,
+    ICP_init: bool = True,
+    h: Optional[float] = None,
+    disable_parallel: bool = False,
+    verbose: bool = True
+)
+
+  >>> make_membrane_weight(
+    self,
+    rho: Optional[float] = None,
+    expected_mean_dist: float = 5.0,
+    n_intg: int = 100
+) -> float
+
+  >>> make_dirichlet(self)
+
+  >>> one_gauss_newton_iter(
+    self,
+    u_field: numpy.ndarray[numpy.floating],
+    rho: float,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+
+  >>> solve(
+    self,
+    u_field: numpy.ndarray[numpy.floating] = None,
+    rho: float = None,
+    eps: float = 0.05,
+    max_iter: int = 20,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> tuple[numpy.ndarray[numpy.floating], float]
+
+  >>> save_paraview(
+    self,
+    u_field: numpy.ndarray[numpy.floating],
+    folder: str,
+    name: str,
+    disable_parallel: bool = False,
+    verbose: bool = True
+)
+
+  >>> plot_results(
+    self,
+    u_field: Optional[numpy.ndarray[numpy.floating]] = None,
+    disable_parallel: bool = False,
+    verbose: bool = True,
+    n_colors: int = 15,
+    interior_only: bool = True,
+    plt_ctrl_mesh: bool = False,
+    pv_plotter: Optional[pyvista.plotting.plotter.Plotter] = None,
+    show: bool = True,
+    elem_sep_color: str = 'black',
+    ctrl_poly_color: str = 'green',
+    **pv_add_mesh_kwargs
+)
+
+  >>> propagate_displacement_to_volume_mesh(
+    self,
+    u_field: numpy.ndarray[numpy.floating],
+    volume_mesh: volVIC.Mesh.Mesh,
+    disable_parallel: bool = False
+) -> numpy.ndarray[numpy.floating]
+
+
+################################################################
+MODULE: volVIC.image_utils
+==========================
+Documentation for module volVIC.image_utils
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> hist(img: numpy.ndarray[numpy.uint16])
+
+  >>> otsu_threshold(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+
+  >>> interp_fg_bg(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+
+  >>> find_fg_bg(
+    img: numpy.ndarray[numpy.uint16],
+    method: Literal['otsu', 'interp'] = 'otsu',
+    save_file: Optional[str] = None,
+    verbose: bool = True
+) -> tuple[float, float]
+
+  >>> find_sigma_hat(image: numpy.ndarray[numpy.uint16], fg: float, bg: float) -> float
+
+################################################################
+MODULE: volVIC.integration_space_image
+======================================
+Documentation for module volVIC.integration_space_image
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> get_tangent(
+    xi,
+    eta,
+    axis,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> get_dxi(
+    xi,
+    eta,
+    dist,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> get_deta(
+    xi,
+    eta,
+    dist,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> linspace_for_VIC_elem_numba(
+    alpha,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    span_xi,
+    span_eta,
+    ctrl_pts,
+    dx
+)
+
+  >>> linspace_for_VIC_elem(
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    dist: float = 1.0,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0
+) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+
+################################################################
+MODULE: volVIC.marching_cubes
+=============================
+Documentation for module volVIC.marching_cubes
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> marching_cubes_nb(volume: numpy.ndarray, threshold: float)
+
+  >>> marching_cubes(volume: numpy.ndarray, threshold: float) -> meshio._mesh.Mesh
+
+################################################################
+MODULE: volVIC.membrane_stiffness
+=================================
+Documentation for module volVIC.membrane_stiffness
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> make_coordinates_systems(
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    dN_dxi: scipy.sparse._matrix.spmatrix,
+    dN_deta: scipy.sparse._matrix.spmatrix
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+
+  >>> make_H(
+    A11: numpy.ndarray[numpy.floating],
+    A22: numpy.ndarray[numpy.floating],
+    A12: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+
+  >>> make_Bm(
+    dN_dxi: scipy.sparse._matrix.spmatrix,
+    dN_deta: scipy.sparse._matrix.spmatrix,
+    A1: numpy.ndarray[numpy.floating],
+    A2: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+
+  >>> make_membrane_stiffness_operator(
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+
+  >>> make_membrane_stifness(
+    mesh: volVIC.Mesh.Mesh,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> scipy.sparse._matrix.spmatrix
+
+  >>> make_membrane_weight(
+    mesh: volVIC.Mesh.Mesh,
+    image_energies: Iterable[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    membrane_K: scipy.sparse._matrix.spmatrix,
+    rho: float = 1.5,
+    image_std: float = 5000,
+    expected_mean_dist: float = 5,
+    n_intg: int = 100
+) -> float
+
+################################################################
+MODULE: volVIC.solve
+====================
+Documentation for module volVIC.solve
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> iteration(
+    u_field: numpy.ndarray[numpy.floating],
+    rho: float,
+    mesh: volVIC.Mesh.Mesh,
+    image_energies: Iterable[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    image: numpy.ndarray,
+    membrane_K: scipy.sparse._matrix.spmatrix,
+    membrane_weight: float,
+    C: scipy.sparse._matrix.spmatrix,
+    verbose: bool = True,
+    disable_parallel: bool = False
+)
+
+################################################################
+MODULE: volVIC.virtual_image
+============================
+Documentation for module volVIC.virtual_image
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> g_slide(
+    xi: numpy.ndarray[numpy.floating],
+    eta: numpy.ndarray[numpy.floating],
+    gamma: numpy.ndarray[numpy.floating],
+    rho: float,
+    bg: float = 0.0,
+    fg: float = 1.0
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+
+################################################################
+MODULE: volVIC.virtual_image_correlation_energy
+===============================================
+Documentation for module volVIC.virtual_image_correlation_energy
+
+CLASS: VirtualImageCorrelationEnergyElem
+-----------------------------------------
+Class representing the elementary VIC energy computation over a B-spline patch in
+isoparametric space.
+
+This class encapsulates the setup and evaluation of the Virtual Image Correlation (VIC)
+energy, including the construction of integration points and operators for a normal
+neighborhood of a B-spline surface. It provides methods to compute the energy, its gradient,
+and Hessian with respect to both the B-spline control point displacements and the virtual
+image parameter, as well as utilities for interpolation and residual computation.
+
+Attributes
+----------
+spline : BSpline
+    The `BSpline` surface object defining the isoparametric space and mapping.
+ctrl_pts : np.ndarray[np.floating]
+    The control points of the `BSpline` surface, as a `numpy` array of shape (3, N_xi, N_eta).
+virtual_image : Callable[[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], float], tuple[np.ndarray[np.floating], np.ndarray[np.floating]]]
+    Function to compute the virtual image and its derivative with respect to `rho`.
+h : float
+    Half width of the normal neighborhood.
+xi : np.ndarray[np.floating]
+    Integration points in the `xi` isoparametric direction.
+dxi : np.ndarray[np.floating]
+    Weights of the integration points in the `xi` isoparametric direction.
+eta : np.ndarray[np.floating]
+    Integration points in the `eta` isoparametric direction.
+deta : np.ndarray[np.floating]
+    Weights of the integration points in the `eta` isoparametric direction.
+gamma : np.ndarray[np.floating]
+    Integration points along the normal direction of the B-spline.
+dgamma : np.ndarray[np.floating]
+    Weights of the integration points along the normal direction.
+Xv0 : np.ndarray[np.floating]
+    Flattened coordinates of the reference points in the normal neighborhood.
+Uv_p : sps.spmatrix
+    Sparse linear operator mapping control point displacements to displacements of points in
+    the normal neighborhood.
+wdetJs : np.ndarray[np.floating]
+    xi and eta quadrature weights scaled by the surface Jacobian determinant.
+wdetJ : np.ndarray[np.floating]
+    xi, eta and gamma quadrature weights scaled by the surface Jacobian determinant.
+
+Notes
+-----
+- Integration points and weights in the isoparametric space and along the normal direction
+are computed automatically.
+- The `virtual_image` function must return a tuple (`g`, `g_prime`), where `g` is the virtual
+image and `g_prime` its derivative with respect to `rho`.
+- Methods are provided for generating integration grids, constructing displacement operators,
+interpolating image values, evaluating the virtual image, computing residuals, and assembling
+the VIC energy and its derivatives.
+
+  >>> __init__(
+    self,
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    surf_dx: float,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]],
+    width_dx: float,
+    h: float,
+    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>
+)
+
+  >>> rigid_body_copy(self, new_ctrl_pts: numpy.ndarray[numpy.floating])
+
+  >>> make_intg_space(
+    self,
+    surf_dx: float,
+    padding: Union[float, tuple[tuple[float, float], tuple[float, float]]],
+    width_dx: float,
+    h: float,
+    eps: float = 1e-06
+) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+
+  >>> make_operators(
+    self
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+
+  >>> f_df_dX(
+    self,
+    X: numpy.ndarray[numpy.floating],
+    image: numpy.ndarray
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix]
+
+  >>> g_dg_drho(
+    self,
+    rho: float
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+
+  >>> r_dr_dg_dr_df(
+    self,
+    g: numpy.ndarray[numpy.floating],
+    f: numpy.ndarray[numpy.floating]
+) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, scipy.sparse._matrix.spmatrix]
+
+  >>> E_dE_du_d2E_du2_dE_drho_d2E_drho2(
+    self,
+    u: numpy.ndarray[numpy.floating],
+    rho: float,
+    image: numpy.ndarray
+) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> make_image_energies(
+    mesh: volVIC.Mesh.Mesh,
+    h: float,
+    width_dx: float = 0.5,
+    surf_dx: float = 1,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
+    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
+
+  >>> plot_last_profile(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
+)
+
+  >>> compute_image_energy_operators(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    mesh: volVIC.Mesh.Mesh,
+    image: numpy.ndarray,
+    u_field: numpy.ndarray[numpy.floating],
+    rho: float,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+
+  >>> compute_distance_field_patch(
+    image_energy,
+    f: numpy.ndarray[numpy.floating],
+    rho: float,
+    max_iter: int = 20
+) -> numpy.ndarray[numpy.floating]
+
+  >>> compute_distance_field(
+    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    saved_data: list[dict[str, numpy.ndarray[numpy.floating]]] = None,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> list[numpy.ndarray[numpy.floating]]

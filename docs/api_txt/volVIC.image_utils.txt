@@ -1,0 +1,180 @@
+MODULE: volVIC.image_utils
+==========================
+Documentation for module volVIC.image_utils
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> hist(img: numpy.ndarray[numpy.uint16])
+      Compute the gray-level histogram of an unsigned integer image.
+      
+      This function counts the number of occurrences of each gray level
+      in the input image. The histogram size is determined from the full
+      range of the image data type (e.g. 0–65535 for `uint16`).
+      
+      Parameters
+      ----------
+      img : np.ndarray[np.uint16]
+          Input grayscale image with unsigned integer values.
+      
+      Returns
+      -------
+      histogram : np.ndarray[np.uint64]
+          Histogram array where `histogram[g]` is the number of pixels
+          with gray level `g`. Histogram array of size
+          `np.iinfo(img.dtype).max + 1 = 65_536`.
+      
+      Notes
+      -----
+      - Implemented with explicit loops for compatibility with Numba `njit`.
+      - The histogram covers the full dynamic range of the input dtype,
+        even if some gray levels are not present in the image.
+
+  >>> otsu_threshold(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+      Estimate foreground and background gray levels using Otsu's method.
+      
+      This function applies Otsu's criterion to a gray-level histogram to
+      find the threshold that maximizes the inter-class variance. It then
+      returns representative mean gray levels for the foreground and
+      background classes.
+      
+      Parameters
+      ----------
+      histogram : np.ndarray[np.uint64]
+          Gray-level histogram of an image, where each entry represents
+          the number of pixels at a given gray level.
+      
+      Returns
+      -------
+      fg_value : float
+          Mean gray level of the foreground class.
+      bg_value : float
+          Mean gray level of the background class.
+      
+      Notes
+      -----
+      - The method assumes a bimodal histogram.
+      - Returned values are floating-point means, not necessarily integer
+        gray levels.
+      - The foreground is defined as the class with the higher mean gray level.
+
+  >>> interp_fg_bg(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+      Estimate foreground and background gray levels by histogram interpolation.
+      
+      This method analyzes the gray-level histogram of an image and estimates
+      representative background and foreground gray levels by:
+        1. Cropping the histogram to its significant support.
+        2. Applying a low-pass filtering in the log-histogram domain by progressively
+           truncating the FFT spectrum.
+        3. Identifying major modes (peaks) and separating them using valleys.
+        4. Refining the peak locations by interpolation to obtain sub-bin
+           estimates of foreground and background gray levels.
+      
+      The approach is designed to be robust to noise and small secondary peaks,
+      and is intended for bimodal or quasi-bimodal histograms commonly encountered
+      in volumetric image correlation problems.
+      
+      Parameters
+      ----------
+      histogram : np.ndarray[np.uint64]
+          Gray-level histogram of an image, where each entry represents the number
+          of pixels at a given gray level.
+      
+      Returns
+      -------
+      fg_value : float
+          Estimated foreground gray level.
+      bg_value : float
+          Estimated background gray level.
+      
+      Notes
+      -----
+      - The histogram is first cropped to exclude bins with negligible population
+        (below 1% of the average bin count).
+      - A low-frequency approximation of the log-histogram is constructed using
+        a limited number of Fourier coefficients, controlled by a maximum number
+        of sign changes in its derivative.
+      - Foreground and background modes are identified as the dominant peaks in
+        two regions separated by a valley in the smoothed histogram.
+      - Sub-bin peak locations are obtained by differentiating and rooting an
+        interpolated histogram representation.
+      - This method is heuristic in nature but often more stable than Otsu's
+        thresholding for unbalanced class distributions.
+
+  >>> find_fg_bg(
+    img: numpy.ndarray[numpy.uint16],
+    method: Literal['otsu', 'interp'] = 'otsu',
+    save_file: Optional[str] = None,
+    verbose: bool = True
+) -> tuple[float, float]
+      Estimate background and foreground gray levels from a grayscale image histogram.
+      
+      This function analyzes the gray-level histogram of an unsigned integer image
+      (typically `uint16`) and estimates representative background (`bg`) and
+      foreground (`fg`) gray levels using either Otsu's method or a histogram
+      interpolation strategy.
+      
+      Optionally, a histogram visualization can be displayed and saved, showing
+      the estimated background and foreground levels.
+      
+      Parameters
+      ----------
+      img : np.ndarray[np.uint16]
+          Input grayscale image with unsigned integer values (typically `uint16`).
+      method : {"otsu", "interp"}, optional
+          Method used to separate foreground and background gray levels:
+          - `"otsu"`: Otsu thresholding applied to the histogram.
+          - `"interp"`: Histogram-based interpolation heuristic.
+          Default is `"otsu"`.
+      save_file : str or None, optional
+          Filename used to save the histogram plot (matplotlib compatible formats accepted).
+          If `None`, the plot is not saved. Default is `None`.
+      verbose : bool, optional
+          If `True`, prints a short summary of the estimation and displays
+          the histogram plot. Default is `True`.
+      
+      Returns
+      -------
+      fg_value : float
+          Estimated foreground gray level.
+      bg_value : float
+          Estimated background gray level.
+      
+      Notes
+      -----
+      - The histogram is internally cropped to remove near-empty bins before
+        visualization (the full histogram is used for estimation).
+      - The returned values are floats, even though the input image is integer-valued.
+
+  >>> find_sigma_hat(image: numpy.ndarray[numpy.uint16], fg: float, bg: float) -> float
+      Estimate the standard deviation of noise in a CT image by analyzing voxels
+      confidently assigned to a single phase.
+      
+      This function computes the unbiased second moment estimate of the noise standard
+      deviation, σ, by considering only voxels whose intensities are either below the
+      background gray level (`bg`, corresponding to air) or above the foreground gray
+      level (`fg`, corresponding to solid material). Voxels with intensities in the
+      ambiguous range [`bg`, `fg`] are excluded to avoid partial volume effects. For each
+      selected voxel, the deviation from its nominal phase value is calculated, and σ is
+      estimated as the square root of the mean squared deviation.
+      
+      Parameters
+      ----------
+      image : np.ndarray[np.uint16]
+          The input CT image as a `np.ndarray` of `np.uint16`, where voxel intensities
+          represent X-ray absorption.
+      fg : float
+          The foreground gray level (nominal value for solid material).
+      bg : float
+          The background gray level (nominal value for air).
+      
+      Returns
+      -------
+      sigma_hat : float
+          The estimated standard deviation of noise, computed from the clean phase voxels.
+      
+      Notes
+      -----
+      - Only voxels with intensities `< bg` (air) or `> fg` (material) are used for the estimation.
+      - Voxels in the range [`bg`, `fg`] are excluded to avoid bias from partial volume effects.
+      - The estimate is based on the second moment of deviations from the nominal phase values,
+      following the folded normal distribution model.

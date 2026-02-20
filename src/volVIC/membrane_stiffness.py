@@ -1,12 +1,13 @@
 from typing import Iterable
 import numpy as np
 import scipy.sparse as sps
-from scipy.stats import chi2
+
+# from scipy.stats import chi2
 
 from bsplyne import BSpline, parallel_blocks
 
 from volVIC.Mesh import Mesh, MeshLattice
-from volVIC.VirtualImageCorrelationEnergyElem import VirtualImageCorrelationEnergyElem
+from volVIC.virtual_image_correlation_energy import VirtualImageCorrelationEnergyElem
 
 
 def make_coordinates_systems(
@@ -283,80 +284,243 @@ def make_membrane_stifness(
     return K
 
 
+# def make_membrane_weight_old(
+#     mesh: Mesh,
+#     image_energies: Iterable[VirtualImageCorrelationEnergyElem],
+#     membrane_K: sps.spmatrix,
+#     image_std: float = 5_000,
+#     expected_mean_dist: float = 5,
+#     monte_carlo_size: int = 100,
+# ) -> float:
+#     """
+#     Infer an appropriate membrane regularization weight for virtual image correlation (VIC) fitting.
+
+#     The membrane weight is determined by comparing the expected virtual image correlation (VIC)
+#     energy to the average membrane energy. The goal is to scale the membrane contribution
+#     such that, at convergence, the image energy approximates the membrane energy:
+
+#         E_VIC(U_CV) ≈ W_MEM * E_MEM(U_CV)
+
+#     The procedure is as follows:
+#     1. Simulate random displacements of the B-spline control points using Gaussian noise
+#        with amplitude proportional to the expected mean distance between the converged mesh
+#        and the real geometry.
+#     2. Compute the membrane energy for each Monte Carlo sample using the provided membrane stiffness matrix.
+#     3. Average the membrane energy over all samples to obtain the expected membrane energy.
+#     4. Estimate the expected VIC energy based on the image standard deviation, expected
+#        mean displacement, voxel volume, and Chi-squared statistics.
+#     5. Set the membrane weight W_MEM such that the expected VIC energy roughly matches
+#        the average membrane energy.
+
+#     Parameters
+#     ----------
+#     mesh : Mesh
+#         The initial mesh to be deformed. Each patch contains B-spline splines with methods
+#         for discretization, interpolation, and energy computation.
+#     image_energies : Iterable[VirtualImageCorrelationEnergyElem]
+#         VIC energies for each patch. Each element provides access to voxel weights, Jacobian determinants,
+#         and patch size.
+#     membrane_K : sps.spmatrix
+#         Sparse, symmetric membrane stiffness operator (pure membrane behavior, no bending).
+#         Used to compute the membrane regularization energy.
+#     image_std : float, optional
+#         Standard deviation of the image intensity, used to estimate the VIC energy.
+#         Default is 5_000.
+#     expected_mean_dist : float, optional
+#         Expected mean displacement between the converged mesh and the real geometry.
+#         Default is 5.
+#     monte_carlo_size : int, optional
+#         Number of Monte Carlo samples for estimating the average membrane energy.
+#         Default is 100.
+
+#     Returns
+#     -------
+#     membrane_weight : float
+#         The inferred membrane regularization weight ensuring that, at convergence, the
+#         VIC energy roughly matches the membrane energy.
+#     """
+#     weights = (
+#         expected_mean_dist
+#         * np.sqrt(8 / np.pi)
+#         * mesh.separated_to_unique(
+#             [s.DN(s.greville_abscissa()).diagonal() for s in mesh.splines]
+#         )
+#     )
+#     cutoff_u = (
+#         weights[None, None, :]
+#         * np.random.randn(monte_carlo_size, *mesh.unique_ctrl_pts.shape)
+#     ).reshape((monte_carlo_size, -1))
+#     E_mem = (0.5 * ((cutoff_u @ membrane_K) * cutoff_u).sum(axis=1)).mean()
+#     volume_of_voxels = sum(
+#         [image_energy.wdetJ.sum() for image_energy in image_energies]
+#     )
+#     E_vic_cv = (
+#         (expected_mean_dist * image_std) ** 2
+#         / (4 * image_energies[0].h)
+#         * chi2.mean(volume_of_voxels)
+#     )
+#     membrane_weight = 10 * E_vic_cv / E_mem
+#     return membrane_weight
+
+
 def make_membrane_weight(
     mesh: Mesh,
     image_energies: Iterable[VirtualImageCorrelationEnergyElem],
     membrane_K: sps.spmatrix,
+    rho: float = 1.5,
     image_std: float = 5_000,
     expected_mean_dist: float = 5,
-    monte_carlo_size: int = 100,
+    n_intg: int = 100,
 ) -> float:
     """
-    Infer an appropriate membrane regularization weight for virtual image correlation (VIC) fitting.
+    Compute a membrane regularization weight by matching the expected membrane
+    energy to the expected virtual image correlation (VIC) energy.
 
-    The membrane weight is determined by comparing the expected virtual image correlation (VIC)
-    energy to the average membrane energy. The goal is to scale the membrane contribution
-    such that, at convergence, the image energy approximates the membrane energy:
-
-        E_VIC(U_CV) ≈ W_MEM * E_MEM(U_CV)
-
-    The procedure is as follows:
-    1. Simulate random displacements of the B-spline control points using Gaussian noise
-       with amplitude proportional to the expected mean distance between the converged mesh
-       and the real geometry.
-    2. Compute the membrane energy for each Monte Carlo sample using the provided membrane stiffness matrix.
-    3. Average the membrane energy over all samples to obtain the expected membrane energy.
-    4. Estimate the expected VIC energy based on the image standard deviation, expected
-       mean displacement, voxel volume, and Chi-squared statistics.
-    5. Set the membrane weight W_MEM such that the expected VIC energy roughly matches
-       the average membrane energy.
+    The membrane energy is evaluated analytically from a probabilistic model
+    of the B-spline control point displacements, while the VIC energy is
+    estimated from finite differences of the virtual image response.
 
     Parameters
     ----------
     mesh : Mesh
-        The initial mesh to be deformed. Each patch contains B-spline splines with methods
-        for discretization, interpolation, and energy computation.
-    image_energies : Iterable[VirtualImageCorrelationEnergyElem]
-        VIC energies for each patch. Each element provides access to voxel weights, Jacobian determinants,
-        and patch size.
-    membrane_K : sps.spmatrix
-        Sparse, symmetric membrane stiffness operator (pure membrane behavior, no bending).
-        Used to compute the membrane regularization energy.
+        B-spline mesh defining the control points and basis functions.
+    image_energies : iterable of VirtualImageCorrelationEnergyElem
+        VIC energy objects associated with each patch.
+    membrane_K : scipy.sparse.spmatrix
+        Membrane stiffness matrix of size (3 * n_bf, 3 * n_bf).
+    rho : float, optional
+        Image correlation parameter passed to the virtual image operator. By default 1.5.
     image_std : float, optional
-        Standard deviation of the image intensity, used to estimate the VIC energy.
-        Default is 5_000.
+        Standard deviation of the image noise. By default 5_000.
     expected_mean_dist : float, optional
-        Expected mean displacement between the converged mesh and the real geometry.
-        Default is 5.
-    monte_carlo_size : int, optional
-        Number of Monte Carlo samples for estimating the average membrane energy.
-        Default is 100.
+        Expected mean distance between the converged B-spline geometry and the
+        target image. By default 5.
+    n_intg : int, optional
+        Number of integration points used for estimating the VIC energy.
+        By default 100.
 
     Returns
     -------
     membrane_weight : float
-        The inferred membrane regularization weight ensuring that, at convergence, the
-        VIC energy roughly matches the membrane energy.
+        Regularization weight such that the expected membrane energy matches
+        the expected VIC energy.
+
+    Notes
+    -----
+    **Expected membrane energy**
+
+    Each B-spline control point ``a`` is assigned a random displacement
+
+        u_a = d_a * w_a * n_a   ∈ R^3
+
+    where:
+
+    - ``d_a = expected_mean_dist * (1 + ε_a)``, with ``ε_a ~ N(0, 1)``
+    - ``w_a = B_a(ξ_a)`` is the B-spline basis evaluated at the Greville abscissa
+    - ``n_a`` is an isotropic random unit vector in R^3
+
+    The membrane stiffness matrix ``K ∈ R^{3 n_bf × 3 n_bf}`` is decomposed into
+    3×3 blocks ``K_{a,b}`` such that
+
+        [K_{a,b}]_{c,d} = K_{c * n_bf + a, d * n_bf + b}
+
+    The discrete membrane energy reads
+
+        E_mem(U) = 1/2 * Σ_{a,b} w_a w_b d_a d_b n_aᵀ K_{a,b} n_b
+
+    Taking the expectation and assuming independence between radial amplitudes
+    and directions yields
+
+        E[E_mem] = 1/2 * Σ_{a,b} w_a w_b E[d_a d_b] E[n_aᵀ K_{a,b} n_b]
+
+    For a ≠ b, the isotropy of ``n_b`` implies
+
+        E[n_aᵀ K_{a,b} n_b] = 0
+
+    Hence only diagonal terms remain:
+
+        E[E_mem] = 1/2 * Σ_a w_a² E[d_a²] E[n_aᵀ K_{a,a} n_a]
+
+    Using isotropy:
+
+        E[n_a n_aᵀ] = 1/3 * I_3
+        ⇒ E[n_aᵀ K_{a,a} n_a] = 1/3 * tr(K_{a,a})
+
+    Moreover:
+
+        E[d_a²] = expected_mean_dist² * E[(1 + ε_a)²] = 2 * expected_mean_dist²
+
+    Finally:
+
+        E[E_mem] = expected_mean_dist² / 3 * Σ_a w_a² * tr(K_{a,a})
+
+    Introducing:
+
+        W = (w_1, ..., w_{n_bf}, w_1, ..., w_{n_bf}, w_1, ..., w_{n_bf})ᵀ
+
+    this can be written compactly as:
+
+        E[E_mem] = expected_mean_dist² / 3 * (W² · diag(K))
+
+    **Expected VIC energy**
+
+    The observed image near the converged surface is modeled as:
+
+        f(γ) = g(γ + d) + σ ε
+
+    where ε ~ N(0,1), σ = image_std, and d is a random normal offset along
+    the surface normal such that E(|d|) = expected_mean_dist.
+
+    The VIC energy is defined as
+
+        E_vic = 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} (f(γ) - g(γ))² dγ dΩ
+
+    Substituting the model:
+
+        f(γ) - g(γ) = g(γ + d) - g(γ) + σ ε
+
+    and taking the expectation:
+
+        E[E_vic] = 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} E[(g(γ + d) - g(γ))²] dγ dΩ
+                    + 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} E[σ² ε²] dγ dΩ
+
+    The cross term vanishes because E[ε] = 0. The noise term evaluates to:
+
+        1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} σ² dγ dΩ = |Ω| σ² / 2
+
+    Assuming the virtual image profile g is locally antisymmetric around the
+    surface (antisymmetry of the transition), the difference
+
+        g(γ + d) - g(γ)
+
+    is symmetric with respect to -d/2, which implies the squared difference
+    depends only on |d|. As the law of d is otherwise unknown, the expectation
+    is approximated by evaluating the energy for a representative offset
+
+        d ≈ expected_mean_dist
+
+    giving the final estimate:
+
+        E[E_vic] ≈ |Ω|/2 * ( σ² + 1/(2h) ∫_{-h}^{h} (g(γ + expected_mean_dist) - g(γ))² dγ )
+
+    This is exactly what is implemented in the code: the integral is computed
+    by discrete summation on each patch.
     """
-    weights = (
-        expected_mean_dist
-        * np.sqrt(8 / np.pi)
-        * mesh.separated_to_unique(
-            [s.DN(s.greville_abscissa()).diagonal() for s in mesh.splines]
-        )
+    weights = mesh.separated_to_unique(
+        [s.DN(s.greville_abscissa()).diagonal() for s in mesh.splines]
     )
-    cutoff_u = (
-        weights[None, None, :]
-        * np.random.randn(monte_carlo_size, *mesh.unique_ctrl_pts.shape)
-    ).reshape((monte_carlo_size, -1))
-    E_mem = (0.5 * ((cutoff_u @ membrane_K) * cutoff_u).sum(axis=1)).mean()
-    volume_of_voxels = sum(
-        [image_energy.wdetJ.sum() for image_energy in image_energies]
-    )
-    E_vic_cv = (
-        (expected_mean_dist * image_std) ** 2
-        / (4 * image_energies[0].h)
-        * chi2.mean(volume_of_voxels)
-    )
-    membrane_weight = E_vic_cv / E_mem
-    return membrane_weight
+    weights = np.hstack([weights] * 3)
+
+    E_mem = expected_mean_dist**2 / 3 * np.dot(weights * weights, membrane_K.diagonal())
+
+    z = np.zeros(1)
+    E_vic = 0
+    for e in image_energies:
+        gamma = np.linspace(-e.h, e.h, n_intg)
+        f = e.virtual_image(z, z, gamma + expected_mean_dist, rho)[0]
+        g = e.virtual_image(z, z, gamma, rho)[0]
+        mean_patch_error = np.mean((f - g) ** 2)
+        patch_area = e.wdetJs.sum()
+        E_vic += patch_area / 2 * (image_std**2 + mean_patch_error)
+
+    return E_vic / E_mem

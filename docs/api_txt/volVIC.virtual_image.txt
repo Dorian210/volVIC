@@ -1,0 +1,37 @@
+MODULE: volVIC.virtual_image
+============================
+Documentation for module volVIC.virtual_image
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> g_slide(
+    xi: numpy.ndarray[numpy.floating],
+    eta: numpy.ndarray[numpy.floating],
+    gamma: numpy.ndarray[numpy.floating],
+    rho: float,
+    bg: float = 0.0,
+    fg: float = 1.0
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+      Calculate the virtual image function and its derivative with respect to `rho`.
+      
+      Parameters
+      ----------
+      xi : np.ndarray[np.floating]
+          Array representing the xi coordinate.
+      eta : np.ndarray[np.floating]
+          Array representing the eta coordinate.
+      gamma : np.ndarray[np.floating]
+          Array representing the gamma coordinate.
+      rho : float
+          Half width of transition from `bg` to `fg` graylevel.
+      bg : float, optional
+          Background graylevel value, default is 0.
+      fg : float, optional
+          Foreground graylevel value, default is 1.
+      
+      Returns
+      -------
+      g : np.ndarray[np.floating]
+          Virtual image function evaluation.
+      g_prime : np.ndarray[np.floating]
+          Derivative of the virtual image function with respect to `rho`.

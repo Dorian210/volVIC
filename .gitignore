@@ -1,10 +1,40 @@
-.qodo
-.vscode
-exemples/BCC_11_4_4
-exemples/cas_cyl
-tmp
-volVIC/fg_bg.svg
-volVIC/__pycache__
-volVIC.egg-info
-build
+# Python
+__pycache__/
+*.py[cod]
 
+# Numba
+*.nbc
+*.nbi
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Pytest
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+.env/
+tmp/
+.test/
+
+# IDE
+.vscode/
+.idea/
+
+# Generated files (examples)
+*.vtu
+*.pvd
+*.stl
+*.pkl
+*.npy
+*.tiff
+
+# OS
+.DS_Store
+
+# Personnal
+context.txt

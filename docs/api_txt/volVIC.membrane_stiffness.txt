@@ -1,0 +1,314 @@
+MODULE: volVIC.membrane_stiffness
+=================================
+Documentation for module volVIC.membrane_stiffness
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> make_coordinates_systems(
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    dN_dxi: scipy.sparse._matrix.spmatrix,
+    dN_deta: scipy.sparse._matrix.spmatrix
+) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+      Compute the covariant basis vectors and transformation components between covariant and contravariant
+      bases.
+      
+      Given `ctrl_pts` (control points in physical space) and the derivatives of the basis functions with
+      respect to the isoparametric coordinates (`dN_dxi`, `dN_deta`), this function returns the covariant basis
+      vectors (`A1`, `A2`) and the transformation components (`A11`, `A22`, `A12`) for each evaluation point.
+      
+      Parameters
+      ----------
+      ctrl_pts : np.ndarray[np.floating]
+          Array of control points in physical space, shaped as (`3`, `n_nodes_xi`, `n_nodes_eta`).
+      dN_dxi : sps.spmatrix
+          Sparse matrix of derivatives of basis functions with respect to the first isoparametric coordinate
+          (`xi`). Shape: (`n_gauss`, `n_nodes`).
+      dN_deta : sps.spmatrix
+          Sparse matrix of derivatives of basis functions with respect to the second isoparametric coordinate
+          (`eta`). Shape: (`n_gauss`, `n_nodes`).
+      
+      Returns
+      -------
+      tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+          Tuple containing:
+          - `A1` (`np.ndarray[np.floating]`): Covariant basis vector 1 at each evaluation point.
+          - `A2` (`np.ndarray[np.floating]`): Covariant basis vector 2 at each evaluation point.
+          - `A11` (`np.ndarray[np.floating]`): First component of the covariant-to-contravariant transformation.
+          - `A22` (`np.ndarray[np.floating]`): Second component of the covariant-to-contravariant transformation.
+          - `A12` (`np.ndarray[np.floating]`): Third component of the covariant-to-contravariant transformation.
+      
+      Notes
+      -----
+      - The transformation components are computed pointwise for each evaluation point in the isoparametric space.
+      - The returned tuple has length 5, with each entry corresponding to an array of values at all evaluation
+      points.
+
+  >>> make_H(
+    A11: numpy.ndarray[numpy.floating],
+    A22: numpy.ndarray[numpy.floating],
+    A12: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+      Assemble Hooke's tensor in contravariant basis Voigt notation for a membrane material with Poisson's ratio
+      set to 0 and Young's modulus set to 1, using B-spline basis components.
+      
+      Parameters
+      ----------
+      A11 : np.ndarray[np.floating]
+          Covariant-to-contravariant basis component array for the (1,1) direction in isoparametric space.
+      A22 : np.ndarray[np.floating]
+          Covariant-to-contravariant basis component array for the (2,2) direction in isoparametric space.
+      A12 : np.ndarray[np.floating]
+          Covariant-to-contravariant basis component array for the (1,2) direction in isoparametric space.
+      
+      Returns
+      -------
+      sps.spmatrix
+          Hooke's tensor as a sparse matrix in contravariant basis Voigt notation, with shape
+          (`3 * n_gauss`, `3 * n_gauss`), where `n_gauss` is the number of isoparametric points.
+      
+      Notes
+      -----
+      - The tensor is block-assembled using `scipy.sparse.bmat` and diagonal matrices from the input arrays.
+      - The material law is restricted to Poisson's ratio = 0 and Young's modulus = 1.
+      - The resulting tensor is suitable for use in isogeometric Kirchhoff-Love membrane formulations.
+
+  >>> make_Bm(
+    dN_dxi: scipy.sparse._matrix.spmatrix,
+    dN_deta: scipy.sparse._matrix.spmatrix,
+    A1: numpy.ndarray[numpy.floating],
+    A2: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+      Assemble the Jacobian matrix `Bm` for membrane deformation in Voight notation in isogeometric analysis.
+      
+      This function constructs the sparse matrix `Bm` by combining the derivatives of the shape functions in the
+      isoparametric (`xi`, `eta`) directions with the corresponding covariant tangent vectors `A1` and `A2`. The
+      resulting matrix maps nodal displacements to membrane strains in Voight notation, and is used in
+      isogeometric membrane finite element formulations.
+      
+      Parameters
+      ----------
+      dN_dxi : sps.spmatrix
+          Sparse matrix of derivatives of the shape functions with respect to the `xi` coordinate in
+          isoparametric space. Shape: (`n_gauss`, `n_nodes`).
+      dN_deta : sps.spmatrix
+          Sparse matrix of derivatives of the shape functions with respect to the `eta` coordinate in
+          isoparametric space. Shape: (`n_gauss`, `n_nodes`).
+      A1 : np.ndarray[np.floating]
+          Covariant tangent vector in the `xi` direction. Shape: (`3`, `n_gauss`).
+      A2 : np.ndarray[np.floating]
+          Covariant tangent vector in the `eta` direction. Shape: (`3`, `n_gauss`).
+      
+      Returns
+      -------
+      sps.spmatrix
+          Sparse matrix `Bm` representing the Jacobian of the membrane deformation transformation in Voight notation. Shape: (`3 * n_gauss`, `3 * n_nodes`).
+      
+      Notes
+      -----
+      - The output matrix `Bm` has shape (`3 * n_gauss`, `3 * n_nodes`), where `n_gauss` is the number of
+      quadrature points and `n_nodes` is the number of control points (basis functions).
+      - The isoparametric space refers to the parametric domain of the B-spline basis.
+
+  >>> make_membrane_stiffness_operator(
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating]
+) -> scipy.sparse._matrix.spmatrix
+      Assemble the global membrane stiffness matrix for a B-spline surface patch.
+      
+      This function computes the global stiffness operator `K` for a B-spline surface patch, considering only
+      in-plane (membrane) strain energy contributions and omitting out-of-plane (bending) effects. The assembly
+      is performed using Gauss-Legendre quadrature over the isoparametric domain.
+      
+      Parameters
+      ----------
+      spline : BSpline
+          B-spline surface patch object defining the geometry and basis functions.
+      ctrl_pts : np.ndarray[np.floating]
+          Array of control points defining the physical geometry of the surface.
+          Shape should be (`3`, `n_nodes_xi`, `n_nodes_eta`).
+      
+      Returns
+      -------
+      K : sps.spmatrix
+          Global stiffness matrix (`sps.spmatrix`) containing only membrane (in-plane) contributions.
+      
+      Notes
+      -----
+      - The integration is performed using quadrature points determined by the spline degrees in each
+      isoparametric direction.
+      - The returned matrix `K` does not include bending or out-of-plane stiffness terms.
+
+  >>> make_membrane_stifness(
+    mesh: volVIC.Mesh.Mesh,
+    verbose: bool = True,
+    disable_parallel: bool = False
+) -> scipy.sparse._matrix.spmatrix
+      Assemble the global membrane stiffness matrix for a full multipatch mesh.
+      
+      This function computes the global membrane stiffness matrix by summing the contributions
+      from all patches of the mesh. Each patch is processed separately using the B-spline geometry
+      and control points of each patch.
+      
+      Parameters
+      ----------
+      mesh : Mesh
+          Mesh object containing B-spline patches.
+      verbose : bool, optional
+          If True, displays a progress bar during assembly. Default is True.
+      disable_parallel : bool, optional
+          If True, disables parallel computation. Default is False.
+      
+      Returns
+      -------
+      sps.spmatrix
+          Global membrane stiffness matrix, including all patches, ready for use in
+          isogeometric membrane finite element analysis. The size corresponds to `3 * n_dofs`,
+          where `n_dofs` is the total number of control points in the mesh.
+      
+      Notes
+      -----
+      - The function internally calls `make_membrane_stiffness_operator` for each patch.
+      - Uses parallel computation if optimal when `disable_parallel` is False.
+      - The resulting matrix includes only in-plane (membrane) stiffness contributions.
+
+  >>> make_membrane_weight(
+    mesh: volVIC.Mesh.Mesh,
+    image_energies: Iterable[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    membrane_K: scipy.sparse._matrix.spmatrix,
+    rho: float = 1.5,
+    image_std: float = 5000,
+    expected_mean_dist: float = 5,
+    n_intg: int = 100
+) -> float
+      Compute a membrane regularization weight by matching the expected membrane
+      energy to the expected virtual image correlation (VIC) energy.
+      
+      The membrane energy is evaluated analytically from a probabilistic model
+      of the B-spline control point displacements, while the VIC energy is
+      estimated from finite differences of the virtual image response.
+      
+      Parameters
+      ----------
+      mesh : Mesh
+          B-spline mesh defining the control points and basis functions.
+      image_energies : iterable of VirtualImageCorrelationEnergyElem
+          VIC energy objects associated with each patch.
+      membrane_K : scipy.sparse.spmatrix
+          Membrane stiffness matrix of size (3 * n_bf, 3 * n_bf).
+      rho : float, optional
+          Image correlation parameter passed to the virtual image operator. By default 1.5.
+      image_std : float, optional
+          Standard deviation of the image noise. By default 5_000.
+      expected_mean_dist : float, optional
+          Expected mean distance between the converged B-spline geometry and the
+          target image. By default 5.
+      n_intg : int, optional
+          Number of integration points used for estimating the VIC energy.
+          By default 100.
+      
+      Returns
+      -------
+      membrane_weight : float
+          Regularization weight such that the expected membrane energy matches
+          the expected VIC energy.
+      
+      Notes
+      -----
+      **Expected membrane energy**
+      
+      Each B-spline control point ``a`` is assigned a random displacement
+      
+          u_a = d_a * w_a * n_a   ∈ R^3
+      
+      where:
+      
+      - ``d_a = expected_mean_dist * (1 + ε_a)``, with ``ε_a ~ N(0, 1)``
+      - ``w_a = B_a(ξ_a)`` is the B-spline basis evaluated at the Greville abscissa
+      - ``n_a`` is an isotropic random unit vector in R^3
+      
+      The membrane stiffness matrix ``K ∈ R^{3 n_bf × 3 n_bf}`` is decomposed into
+      3×3 blocks ``K_{a,b}`` such that
+      
+          [K_{a,b}]_{c,d} = K_{c * n_bf + a, d * n_bf + b}
+      
+      The discrete membrane energy reads
+      
+          E_mem(U) = 1/2 * Σ_{a,b} w_a w_b d_a d_b n_aᵀ K_{a,b} n_b
+      
+      Taking the expectation and assuming independence between radial amplitudes
+      and directions yields
+      
+          E[E_mem] = 1/2 * Σ_{a,b} w_a w_b E[d_a d_b] E[n_aᵀ K_{a,b} n_b]
+      
+      For a ≠ b, the isotropy of ``n_b`` implies
+      
+          E[n_aᵀ K_{a,b} n_b] = 0
+      
+      Hence only diagonal terms remain:
+      
+          E[E_mem] = 1/2 * Σ_a w_a² E[d_a²] E[n_aᵀ K_{a,a} n_a]
+      
+      Using isotropy:
+      
+          E[n_a n_aᵀ] = 1/3 * I_3
+          ⇒ E[n_aᵀ K_{a,a} n_a] = 1/3 * tr(K_{a,a})
+      
+      Moreover:
+      
+          E[d_a²] = expected_mean_dist² * E[(1 + ε_a)²] = 2 * expected_mean_dist²
+      
+      Finally:
+      
+          E[E_mem] = expected_mean_dist² / 3 * Σ_a w_a² * tr(K_{a,a})
+      
+      Introducing:
+      
+          W = (w_1, ..., w_{n_bf}, w_1, ..., w_{n_bf}, w_1, ..., w_{n_bf})ᵀ
+      
+      this can be written compactly as:
+      
+          E[E_mem] = expected_mean_dist² / 3 * (W² · diag(K))
+      
+      **Expected VIC energy**
+      
+      The observed image near the converged surface is modeled as:
+      
+          f(γ) = g(γ + d) + σ ε
+      
+      where ε ~ N(0,1), σ = image_std, and d is a random normal offset along
+      the surface normal such that E(|d|) = expected_mean_dist.
+      
+      The VIC energy is defined as
+      
+          E_vic = 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} (f(γ) - g(γ))² dγ dΩ
+      
+      Substituting the model:
+      
+          f(γ) - g(γ) = g(γ + d) - g(γ) + σ ε
+      
+      and taking the expectation:
+      
+          E[E_vic] = 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} E[(g(γ + d) - g(γ))²] dγ dΩ
+                      + 1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} E[σ² ε²] dγ dΩ
+      
+      The cross term vanishes because E[ε] = 0. The noise term evaluates to:
+      
+          1/2 ∫_Ω 1/(2h) ∫_{-h}^{h} σ² dγ dΩ = |Ω| σ² / 2
+      
+      Assuming the virtual image profile g is locally antisymmetric around the
+      surface (antisymmetry of the transition), the difference
+      
+          g(γ + d) - g(γ)
+      
+      is symmetric with respect to -d/2, which implies the squared difference
+      depends only on |d|. As the law of d is otherwise unknown, the expectation
+      is approximated by evaluating the energy for a representative offset
+      
+          d ≈ expected_mean_dist
+      
+      giving the final estimate:
+      
+          E[E_vic] ≈ |Ω|/2 * ( σ² + 1/(2h) ∫_{-h}^{h} (g(γ + expected_mean_dist) - g(γ))² dγ )
+      
+      This is exactly what is implemented in the code: the integral is computed
+      by discrete summation on each patch.

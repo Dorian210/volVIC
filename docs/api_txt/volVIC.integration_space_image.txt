@@ -1,0 +1,123 @@
+MODULE: volVIC.integration_space_image
+======================================
+Documentation for module volVIC.integration_space_image
+
+GLOBAL FUNCTIONS:
+~~~~~~~~~~~~~~~~~~
+  >>> get_tangent(
+    xi,
+    eta,
+    axis,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> get_dxi(
+    xi,
+    eta,
+    dist,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> get_deta(
+    xi,
+    eta,
+    dist,
+    ctrl_pts,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    m_xi,
+    m_eta,
+    n_xi,
+    n_eta
+)
+
+  >>> linspace_for_VIC_elem_numba(
+    alpha,
+    p_xi,
+    p_eta,
+    knot_xi,
+    knot_eta,
+    span_xi,
+    span_eta,
+    ctrl_pts,
+    dx
+)
+
+  >>> linspace_for_VIC_elem(
+    spline: bsplyne.b_spline.BSpline,
+    ctrl_pts: numpy.ndarray[numpy.floating],
+    dist: float = 1.0,
+    alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0
+) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+      Compute integration points and weights in the parametric space of a `BSpline`
+      surface, such that the mapped distance between points is close to `dist`.
+      
+      This function generates arrays of integration points and their corresponding
+      weights (step sizes) in both parametric directions (`xi` and `eta`) of a
+      `BSpline` surface. The integration points are distributed so that the mapped
+      distance between them, after transformation by the `BSpline`, is approximately
+      `dist`. The ignored border distance can be set independently for each boundary
+      using `alpha`. The computation is performed at the center of the other
+      parametric span for each direction.
+      
+      Parameters
+      ----------
+      spline : BSpline
+          The `BSpline` surface object defining the parametric space and mapping.
+      
+      ctrl_pts : np.ndarray[np.floating]
+          The control points of the `BSpline` surface, as a `numpy` array of shape
+          `(3, N_xi, N_eta)`.
+      
+      dist : float, optional
+          The target distance between integration points after mapping through the
+          `BSpline`.
+          By default, `1`.
+      
+      alpha : Union[float, tuple[tuple[float, float], tuple[float, float]]], optional
+          The distance to ignore on the border of the patch in each parametric
+          direction.
+          If a `float`, the same value is used for all boundaries.
+          If a `tuple of tuples`,
+          ((`dist_xi_0`, `dist_xi_1`), (`dist_eta_0`, `dist_eta_1`)),
+          where each value specifies the ignored distance at the corresponding boundary.
+          By default, `0`.
+      
+      Returns
+      -------
+      (xi, eta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+          Tuple of `numpy` arrays containing the integration points in the `xi` and
+          `eta` isoparametric directions.
+      
+      (dxi, deta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+          Tuple of `numpy` arrays containing the integration weights (step sizes) in
+          the `xi` and `eta` directions.
+      
+      Notes
+      -----
+      - The integration points are distributed so that the mapped distance between
+      them is approximately `dist`.
+      - The ignored border distance can be set independently for each boundary using
+      `alpha`.
+      - The function internally calls a `numba`-accelerated implementation for
+      performance.
+      - For a surface (2D), returns
+      ((`xi` points, `eta` points), (`xi` weights, `eta` weights)).
