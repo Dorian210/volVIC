@@ -245,6 +245,12 @@ from volVIC.integration_space_image import linspace_for_VIC_elem
 
 ---
 
+## Documentation
+
+The full API documentation is available on the [Online Portal](https://dorian210.github.io/volVIC/).
+
+---
+
 ## License
 
 This project is licensed under the **CeCILL-2.1** license — see [https://cecill.info](https://cecill.info) for details.
