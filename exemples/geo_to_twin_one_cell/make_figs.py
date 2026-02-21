@@ -353,7 +353,27 @@ pv_plotter.add_mesh(
     line_width=3,
 )
 setup_camera(pv_plotter)
-pv_plotter.screenshot("figs/logo.png")
+pv_plotter.screenshot("figs/logo_image2iga.png")
+pv_plotter.show()
+
+# %% logo bis: distance after fitting w/o colorbar
+
+u_field = np.load("out_fitting/u_field.npy")
+
+with open("out_fitting/problem.pkl", "rb") as file:
+    pb = pkl.load(file)
+
+pv_plotter = pv.Plotter(window_size=(1080, 1080))
+pb.plot_results(
+    u_field=u_field,
+    interior_only=False,
+    pv_plotter=pv_plotter,
+    show=False,
+    show_scalar_bar=False,
+    smooth_shading=True,
+)
+setup_camera(pv_plotter)
+pv_plotter.screenshot("figs/logo_volVIC.png")
 pv_plotter.show()
 
 # %%

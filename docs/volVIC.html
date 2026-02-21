@@ -25,11 +25,14 @@
 
             <h2>Contents</h2>
             <ul>
-  <li><a href="#volvic">volVIC</a>
+  <li><a href="#volvic-volume-based-virtual-image-correlation">volVIC — VOLume-based Virtual Image Correlation</a>
   <ul>
-    <li><a href="#overview">📌 Overview</a></li>
-    <li><a href="#installation">🚀 Installation</a></li>
-    <li><a href="#citation">📄 Citation</a></li>
+    <li><a href="#table-of-contents">Table of Contents</a></li>
+    <li><a href="#method-overview">Method overview</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#quick-start">Quick start</a></li>
+    <li><a href="#module-overview">Module overview</a></li>
+    <li><a href="#license">License</a></li>
   </ul></li>
 </ul>
 
@@ -62,37 +65,314 @@
                     <h1 class="modulename">
 volVIC    </h1>
 
-                        <div class="docstring"><h1 id="volvic">volVIC</h1>
+                        <div class="docstring"><h1 id="volvic-volume-based-virtual-image-correlation">volVIC — VOLume-based Virtual Image Correlation</h1>
 
-<p><strong>VOLume-based Virtual Image Correlation (volVIC) library for Python</strong>
-Python library for isogeometric multipatch surface fitting of volumetric images, based on the method described in <a href="https://doi.org/10.1016/j.cma.2025.117729">Bichet et al., 2025</a>.</p>
+<p align="center">
+  <img src="logo.png" width="500" />
+</p>
 
-<h2 id="overview">📌 Overview</h2>
+<p><strong>volVIC</strong> is a Python library for surface shape measurement from 3D volumetric images (e.g. CT scans) using the <strong>Virtual Image Correlation (VIC)</strong> method. It fits a parametric B-spline surface mesh to a grayscale volume by minimizing an energy functional that compares a synthetic "virtual image" — built from the surface geometry — to the actual acquired image.</p>
 
-<p><code><a href="">volVIC</a></code> provides tools to extract <strong>analysis-ready multipatch B-spline surface models</strong> from volumetric scan data (CT/µCT), handling design deviations and manufacturing defects.
-Key features:</p>
+<p>The method is particularly suited to problems in experimental mechanics, where one wants to track the shape or deformation of a material surface from tomographic data.</p>
+
+<hr />
+
+<h2 id="table-of-contents">Table of Contents</h2>
 
 <ul>
-<li>Multi-patch B-spline surface representation.</li>
-<li>Deformation to match as-manufactured scans.</li>
-<li>Defect quantification and geometric analysis.</li>
+<li><a href="#method-overview">Method overview</a></li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#quick-start">Quick start</a></li>
+<li><a href="#module-overview">Module overview</a></li>
+<li><a href="#license">License</a></li>
 </ul>
 
-<h2 id="installation">🚀 Installation</h2>
+<hr />
+
+<h2 id="method-overview">Method overview</h2>
+
+<p>The VIC approach replaces classical pixel-to-pixel image correlation with a physics-motivated model. Given a B-spline surface mesh and a volumetric image:</p>
+
+<ol>
+<li>A <strong>virtual image</strong> is constructed analytically from the surface geometry. It models the gray-level transition (background ↔ foreground) along the surface normal, parameterized by a scalar distance <code>rho</code>.</li>
+<li>The <strong>VIC energy</strong> measures the discrepancy between the virtual image and the actual acquired image, integrated over a normal neighborhood of the surface.</li>
+<li>A <strong>Gauss–Newton solver</strong> iteratively minimizes the total energy (VIC + membrane regularization) with respect to the B-spline control point displacements and <code>rho</code>.</li>
+<li><strong>C¹ continuity constraints</strong> across patches and <strong>Dirichlet boundary conditions</strong> are enforced through a constraint matrix.</li>
+</ol>
+
+<hr />
+
+<h2 id="installation">Installation</h2>
+
+<h3 id="1-high-performance-solvers-optional-but-recommended">1. High-Performance Solvers (Optional but Recommended)</h3>
+
+<p><strong>volVIC</strong> relies on <a href="https://github.com/Dorian210/IGA_for_bsplyne">IGA_for_bsplyne</a> for its linear system solvers. This library can leverage <code>SuiteSparse</code> (via <code>scikit-sparse</code> and <code>sparseqr</code>) for significant speedups on large-scale problems.</p>
+
+<ul>
+<li><p><strong>Recommended (Conda)</strong>:</p>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Dorian210/volVIC.git
-<span class="nb">cd</span><span class="w"> </span>volVIC
-pip<span class="w"> </span>install<span class="w"> </span>.
+<pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>scikit-sparse
+pip<span class="w"> </span>install<span class="w"> </span>sparseqr
 </code></pre>
 </div>
 
-<h2 id="citation">📄 Citation</h2>
+<p><em>Note: <code>sparseqr</code> is not on Conda, but it will successfully link to the SuiteSparse libraries installed by <code>scikit-sparse</code>.</em></p></li>
+<li><p><strong>Alternative (system package manager)</strong>:</p>
 
-<pre><code>D. Bichet, J.-C. Passieux, J.-N. Périé, R. Bouclier,
-“Isogeometric multipatch surface fitting in tomographic images: application to lattice structures”,
-Computer Methods in Applied Mechanics and Engineering, 436:117729, 2025.
+<ul>
+<li><strong>macOS</strong>: <code>brew install suitesparse &amp;&amp; pip install scikit-sparse sparseqr</code></li>
+<li><strong>Ubuntu/Debian</strong>: <code>sudo apt-get install libsuitesparse-dev &amp;&amp; pip install scikit-sparse sparseqr</code></li>
+</ul></li>
+<li><p><strong>Fallback</strong>: If SuiteSparse is not available, the library automatically falls back to standard <code>scipy.sparse</code> solvers, ensuring full compatibility at the cost of performance.</p></li>
+</ul>
+
+<h3 id="2-install-volvic">2. Install volVIC</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>volVIC
 </code></pre>
+</div>
+
+<p><strong>Requirements:</strong> Python ≥ 3.9</p>
+
+<p><strong>Key dependencies:</strong> <code>numpy</code>, <code>scipy</code>, <code>numba</code>, <code>bsplyne</code>, <code>IGA_for_bsplyne</code>, <code>pyvista</code>, <code>meshio</code>, <code>interpylate</code>, <code>treeIDW</code>, <code>matplotlib</code>, <code>tqdm</code></p>
+
+<hr />
+
+<h2 id="quick-start">Quick start</h2>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">volVIC</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">Problem</span>
+
+<span class="c1"># Load your B-spline surface mesh and volumetric image</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;my_mesh.pkl&quot;</span><span class="p">)</span>
+<span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;my_ct_scan.npy&quot;</span><span class="p">)</span>   <span class="c1"># dtype: uint16, shape: (Z, Y, X)</span>
+
+<span class="c1"># Set up and solve the VIC problem</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">Problem</span><span class="p">(</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="n">image</span><span class="o">=</span><span class="n">image</span><span class="p">,</span>
+    <span class="n">ICP_init</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>         <span class="c1"># Rigid-body alignment before solving</span>
+    <span class="n">C1_mode</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>        <span class="c1"># Automatic C¹ continuity between patches</span>
+    <span class="n">membrane_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Automatic regularization weight estimation</span>
+<span class="p">)</span>
+<span class="n">u_field</span><span class="p">,</span> <span class="n">rho</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+
+<span class="c1"># Visualize results</span>
+<span class="n">problem</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">u_field</span><span class="p">)</span>
+
+<span class="c1"># Export to ParaView</span>
+<span class="n">problem</span><span class="o">.</span><span class="n">save_paraview</span><span class="p">(</span><span class="n">u_field</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">&quot;results/&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vic_output&quot;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<hr />
+
+<h2 id="module-overview">Module overview</h2>
+
+<h3 id="volvicproblem-high-level-solver"><code><a href="volVIC/Problem.html">volVIC.Problem</a></code> — High-level solver</h3>
+
+<p>The main entry point. The <code>Problem</code> class encapsulates the full VIC pipeline.</p>
+
+<p><strong>Constructor</strong> <code>Problem(mesh, image, ...)</code>:</p>
+
+<ul>
+<li>Estimates foreground/background gray levels from the image histogram (Otsu or interpolation-based).</li>
+<li>Optionally performs a rigid-body ICP alignment of the mesh to the image isosurface.</li>
+<li>Builds the virtual image energy elements, membrane stiffness matrix, and C¹ constraint matrix.</li>
+<li>Calibrates the membrane regularization weight automatically.</li>
+</ul>
+
+<p><strong>Key methods:</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Method</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>solve(max_iter, ...)</code></td>
+  <td>Run the Gauss–Newton optimization loop. Returns <code>(u_field, rho)</code>.</td>
+</tr>
+<tr>
+  <td><code>plot_results(u_field, ...)</code></td>
+  <td>Visualize signed distance fields with PyVista.</td>
+</tr>
+<tr>
+  <td><code>save_paraview(u_field, folder, name)</code></td>
+  <td>Export displacement and distance fields to VTK for ParaView.</td>
+</tr>
+<tr>
+  <td><code>propagate_displacement_to_volume_mesh(u_field, volume_mesh)</code></td>
+  <td>Propagate the surface displacement to a volumetric B-spline mesh.</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h3 id="volvicmesh-b-spline-mesh-management"><code><a href="volVIC/Mesh.html">volVIC.Mesh</a></code> — B-spline mesh management</h3>
+
+<p>Provides the <code>Mesh</code> class wrapping multi-patch B-spline surfaces.</p>
+
+<p><strong>Key features:</strong></p>
+
+<ul>
+<li>Load/save mesh from <code>.pkl</code> (pickle) files (<code>Mesh.load</code>, <code>Mesh.save</code>).</li>
+<li>Evaluate the mesh geometry and fields at arbitrary parametric points.</li>
+<li>Convert fields between per-patch and unique-node representations.</li>
+<li>Extract border patches, mesh subsets, and orientation fields.</li>
+<li>Visualize with PyVista (<code>plot</code>, <code>plot_in_image</code>, <code>plot_orientation</code>).</li>
+<li>Export time series to ParaView with <code>save_paraview</code>.</li>
+<li>Register mesh to a target triangle surface with <code>ICP_rigid_body_transform</code>.</li>
+<li>Propagate scalar or vector fields from a submesh to a parent mesh.</li>
+</ul>
+
+<hr />
+
+<h3 id="volvicvirtual_image_correlation_energy-vic-energy"><code><a href="volVIC/virtual_image_correlation_energy.html">volVIC.virtual_image_correlation_energy</a></code> — VIC energy</h3>
+
+<p>The <code>VirtualImageCorrelationEnergyElem</code> class handles the energy computation for a single B-spline patch. It:</p>
+
+<ul>
+<li>Builds integration grids in both parametric and normal directions.</li>
+<li>Constructs the sparse small rotation displacement operator mapping control points to integration points in the image.</li>
+<li>Evaluates the VIC energy, gradient, and Gauss-Newton Hessian w.r.t. displacements and <code>rho</code>.</li>
+</ul>
+
+<p>The module also provides utilities:</p>
+
+<ul>
+<li><code>make_image_energies(mesh, h, ...)</code> — initialize energy elements for a full mesh.</li>
+<li><code>compute_image_energy_operators(...)</code> — assemble global gradient and Hessian.</li>
+<li><code>compute_distance_field(...)</code> — compute the signed distance field on each patch.</li>
+</ul>
+
+<hr />
+
+<h3 id="volvicvirtual_image-virtual-image-model"><code><a href="volVIC/virtual_image.html">volVIC.virtual_image</a></code> — Virtual image model</h3>
+
+<p>Defines the virtual image function used in the VIC energy:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/virtual_image.html">volVIC.virtual_image</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">g_slide</span>
+
+<span class="n">g</span><span class="p">,</span> <span class="n">dg_drho</span> <span class="o">=</span> <span class="n">g_slide</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">bg</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p><code>g_slide</code> models a smooth transition from background to foreground gray level along the surface normal (<code>gamma</code>), parameterized by the half-width <code>rho</code>. It returns both the image value <code>g</code> and its derivative w.r.t. <code>rho</code>.</p>
+
+<hr />
+
+<h3 id="volvicsolve-gaussnewton-iteration"><code><a href="volVIC/solve.html">volVIC.solve</a></code> — Gauss–Newton iteration</h3>
+
+<p>Low-level function performing one VIC iteration:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/solve.html">volVIC.solve</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">iteration</span>
+
+<span class="n">du_field</span><span class="p">,</span> <span class="n">drho</span> <span class="o">=</span> <span class="n">iteration</span><span class="p">(</span><span class="n">u_field</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">image_energies</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span>
+                           <span class="n">membrane_K</span><span class="p">,</span> <span class="n">membrane_weight</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>Assembles and solves the linearized system <code>H_tot @ Δu = -grad_tot</code>, with constraint enforcement via the matrix <code>C</code>. The <code>rho</code> increment is computed independently by a Newton step on the scalar energy.</p>
+
+<hr />
+
+<h3 id="volvicmembrane_stiffness-regularization"><code><a href="volVIC/membrane_stiffness.html">volVIC.membrane_stiffness</a></code> — Regularization</h3>
+
+<p>Assembles the membrane (in-plane) stiffness matrix for B-spline surface patches, used as a regularization term in the VIC energy:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/membrane_stiffness.html">volVIC.membrane_stiffness</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">make_membrane_stifness</span><span class="p">,</span> <span class="n">make_membrane_weight</span>
+
+<span class="n">K</span> <span class="o">=</span> <span class="n">make_membrane_stifness</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">make_membrane_weight</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">image_energies</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">image_std</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>The <code>make_membrane_weight</code> function calibrates the regularization weight by matching the expected membrane energy to the expected VIC energy under a probabilistic displacement model.</p>
+
+<hr />
+
+<h3 id="volvicc1_triplets-smoothness-constraints"><code><a href="volVIC/C1_triplets.html">volVIC.C1_triplets</a></code> — Smoothness constraints</h3>
+
+<p>Generates C¹ continuity constraints between neighboring patches:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/C1_triplets.html">volVIC.C1_triplets</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">make_C1_eqs</span>
+
+<span class="n">C</span> <span class="o">=</span> <span class="n">make_C1_eqs</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">C1_inds</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>Each constraint takes the form <code>A - 2B + C = 0</code> for a triplet of control nodes <code>(A, B, C)</code>. The <code>"auto"</code> mode selects only geometrically consistent triplets.</p>
+
+<hr />
+
+<h3 id="volvicimage_utils-image-preprocessing"><code><a href="volVIC/image_utils.html">volVIC.image_utils</a></code> — Image preprocessing</h3>
+
+<p>Utilities for gray-level analysis of CT images:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/image_utils.html">volVIC.image_utils</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">find_fg_bg</span><span class="p">,</span> <span class="n">find_sigma_hat</span>
+
+<span class="n">fg</span><span class="p">,</span> <span class="n">bg</span> <span class="o">=</span> <span class="n">find_fg_bg</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;otsu&quot;</span><span class="p">)</span>   <span class="c1"># or &quot;interp&quot;</span>
+<span class="n">sigma</span>  <span class="o">=</span> <span class="n">find_sigma_hat</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">fg</span><span class="p">,</span> <span class="n">bg</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<ul>
+<li><code>find_fg_bg</code> estimates foreground and background gray levels from the image histogram.</li>
+<li><code>find_sigma_hat</code> estimates the noise standard deviation from single-phase voxels.</li>
+<li>Lower-level functions <code>hist</code>, <code>otsu_threshold</code>, and <code>interp_fg_bg</code> are also exposed.</li>
+</ul>
+
+<hr />
+
+<h3 id="volvicmarching_cubes-isosurface-extraction"><code><a href="volVIC/marching_cubes.html">volVIC.marching_cubes</a></code> — Isosurface extraction</h3>
+
+<p>Extracts a triangle isosurface from a 3D scalar field:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/marching_cubes.html">volVIC.marching_cubes</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">marching_cubes</span>
+
+<span class="n">surface</span> <span class="o">=</span> <span class="n">marching_cubes</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c1"># returns meshio.Mesh</span>
+</code></pre>
+</div>
+
+<p>Uses a Numba-compiled implementation for performance, with vertex deduplication and zero-area triangle prevention.</p>
+
+<hr />
+
+<h3 id="volvicintegration_space_image-parametric-integration"><code><a href="volVIC/integration_space_image.html">volVIC.integration_space_image</a></code> — Parametric integration</h3>
+
+<p>Computes integration points and weights in the parametric space of a B-spline surface such that mapped distances between points are approximately uniform:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn"><a href="volVIC/integration_space_image.html">volVIC.integration_space_image</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">linspace_for_VIC_elem</span>
+
+<span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">eta</span><span class="p">),</span> <span class="p">(</span><span class="n">dxi</span><span class="p">,</span> <span class="n">deta</span><span class="p">)</span> <span class="o">=</span> <span class="n">linspace_for_VIC_elem</span><span class="p">(</span><span class="n">spline</span><span class="p">,</span> <span class="n">ctrl_pts</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<hr />
+
+<h2 id="license">License</h2>
+
+<p>This project is licensed under the <strong>CeCILL-2.1</strong> license — see <a href="https://cecill.info">https://cecill.info</a> for details.</p>
+
+<hr />
+
+<p><em>Author: Dorian Bichet — <a href="mailto:dbichet@insa-toulouse.fr">dbichet@insa-toulouse.fr</a></em><br />
+<em>Repository: <a href="https://github.com/Dorian210/volVIC">https://github.com/Dorian210/volVIC</a></em></p>
 </div>
 
                         <input id="mod-volVIC-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">

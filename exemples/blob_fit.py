@@ -9,7 +9,7 @@ from volVIC import Mesh, Problem
 l = 1
 spline, ctrl_pts = new_cube([0, 0, 0], [0, 0, 1], 1)
 ctrl_pts = spline.orderElevation(ctrl_pts, [2, 2, 2])
-ctrl_pts = spline.knotInsertion(ctrl_pts, [4, 4, 4])
+ctrl_pts = spline.knotInsertion(ctrl_pts, [5, 5, 5])
 
 # Rescale control points to match the desired physical size
 ctrl_pts = ctrl_pts * l / (2 * np.linalg.norm(ctrl_pts, axis=0)[None])
@@ -60,15 +60,15 @@ fg, bg = 0.75, 0.25
 X, Y, Z = np.meshgrid(*[np.linspace(-l, l, n)] * 3, indexing="ij")
 
 # Simple spherical object
-mask = (X**2 + Y**2 + Z**2) < (l / 2) ** 2
+# mask = (X**2 + Y**2 + Z**2) < (l / 2) ** 2
 
 # More complex geometry: main sphere with three smaller embedded spheres
-# mask = (
-#     ((X**2 + Y**2 + Z**2) < (l / 2) ** 2)
-#     | (((X - l / 2) ** 2 + Y**2 + Z**2) < (l / 4) ** 2)
-#     | ((X**2 + (Y - l / 2) ** 2 + Z**2) < (l / 4) ** 2)
-#     | ((X**2 + Y**2 + (Z - l / 2) ** 2) < (l / 4) ** 2)
-# )
+mask = (
+    ((X**2 + Y**2 + Z**2) < (l / 2) ** 2)
+    | (((X - l / 2) ** 2 + Y**2 + Z**2) < (l / 8) ** 2)
+    | ((X**2 + (Y - l / 2) ** 2 + Z**2) < (l / 8) ** 2)
+    | ((X**2 + Y**2 + (Z - l / 2) ** 2) < (l / 8) ** 2)
+)
 
 # Assign foreground and background gray levels
 image = np.where(mask, fg, bg)
