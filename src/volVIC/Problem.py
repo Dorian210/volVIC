@@ -104,7 +104,7 @@ class Problem:
             tuple[np.ndarray[np.floating], np.ndarray[np.floating]],
         ] = g_slide,
         h: Union[float, None] = None,
-        width_dx: float = 2.0,
+        width_dx: float = 0.5,
         surf_dx: float = 1.0,
         alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
         C1_mode: Union[
@@ -186,24 +186,31 @@ class Problem:
 
         width_dx : float, optional
             Integration step along the normal direction for image energies.
+            By default, `0.5`.
 
         surf_dx : float, optional
             Integration step along the surface for image energies.
+            By default, `1.0`.
 
-        alpha : float or tuple, optional
-            Tangential regularization weight used in the image energies.
-            A value of 0.0 (default) disables tangential smoothing.
+        alpha : Union[float, tuple[tuple[float, float], tuple[float, float]]], optional
+            The distance to ignore on the border of the patch in each parametric
+            direction.
+            If a `float`, the same value is used for all boundaries.
+            If a `tuple of tuples`,
+            ((`dist_xi_0`, `dist_xi_1`), (`dist_eta_0`, `dist_eta_1`)),
+            where each value specifies the ignored distance at the corresponding boundary.
+            By default, `0`.
 
         C1_mode : {"auto", "none", "all"} or np.ndarray or None, optional
             Definition of C¹ continuity constraints between patches:
-                - "auto": automatically selected constraints (recommended)
-                - "none": no C¹ constraints
-                - "all": enforce C¹ everywhere
+                - `"auto"`: (default) automatically selected constraints (recommended)
+                - `"none"`: no C¹ constraints
+                - `"all"`: enforce C¹ everywhere
                 - array: user-defined triplets of constrained control points
 
         membrane_weight : float or None, optional
             Weight of the membrane (elastic) regularization term.
-            If None (default), the weight is automatically calibrated.
+            If `None` (default), the weight is automatically calibrated.
 
         initial_rho : float, optional
             Initial value of the transition distance parameter used in the VIC model.
@@ -241,7 +248,8 @@ class Problem:
                 print("[VIC] Estimating foreground/background levels from image")
             self.fg, self.bg = self.find_fg_bg(method=fg_bg_method, verbose=verbose)
         else:
-            self.fg, self.bg = fg_bg
+            fg, bg = fg_bg
+            self.fg, self.bg = float(fg), float(bg)
 
         if verbose:
             print(f"[VIC] fg = {self.fg}, bg = {self.bg}")
@@ -289,7 +297,7 @@ class Problem:
         if verbose:
             print("[VIC] Building C1 constraints")
 
-        C1_eqs = make_C1_eqs(self.mesh, C1_mode)
+        C1_eqs = make_C1_eqs(self.mesh, C1_mode, field_size=3, verbose=verbose)
 
         self.constraints = DirichletConstraintHandler(
             self.mesh.connectivity.nb_unique_nodes * 3
@@ -299,7 +307,7 @@ class Problem:
         if verbose:
             print(f"[VIC] Number of C1 equations: {C1_eqs.shape[0]}")
 
-        self.dirichlet = self.make_dirichlet()
+        self.make_dirichlet()
 
         # --- Membrane stiffness -------------------------------------------------------
         if verbose:
@@ -331,9 +339,9 @@ class Problem:
 
         self.initial_rho = initial_rho
 
-        self.image = self.image.astype(
-            float
-        )  # TODO remove casting by adapting interpolation
+        # self.image = self.image.astype(
+        #     float
+        # )  # TODO remove casting by adapting interpolation
 
         if verbose:
             print("[VIC] Initialization done ✔")
@@ -891,50 +899,105 @@ class Problem:
         self,
         u_field: np.ndarray[np.floating],
         volume_mesh: Mesh,
+        voxel_size: float = 1.0,
         disable_parallel: bool = False,
     ) -> np.ndarray[np.floating]:
         """
-        Propagate the surface displacement field to a volumetric mesh.
+        Propagate a surface displacement field from voxel coordinates to a volumetric mesh
+        in the original rescaled coordinate system.
 
-        This method maps the displacement field computed on the surface mesh
-        (`self.mesh`) to a target volume mesh (`volume_mesh`). The mapping uses
-        the surface-to-volume interpolation implemented in
-        :meth:`Mesh.propagate_field_from_submesh`. The resulting volumetric
-        displacement field is returned in the same coordinate system as the
-        original surface mesh (before ICP).
+        The surface displacement field `u_field` is expressed in voxel coordinates.
+        It is automatically transformed by `self.Rmat.T` to the rescaled coordinates
+        of the target volumetric mesh `volume_mesh`, and interpolated using
+        :meth:`Mesh.propagate_field_from_submesh`. The returned displacement is
+        expressed in the same coordinate system as the volumetric mesh.
 
         Parameters
         ----------
         u_field : np.ndarray[np.floating]
-            Surface displacement field to propagate. Typically, this is the
-            `u_field` obtained from the :meth:`solve` method.
+            Surface displacement field in voxel coordinates, typically obtained from
+            :meth:`solve`.
 
         volume_mesh : Mesh
-            Target volumetric mesh on which to propagate the displacement.
+            Target volumetric mesh in rescaled coordinates (original coordinate system
+            rescaled by the voxel size).
 
         disable_parallel : bool, optional
-            If `True`, disables parallel computation. Default is `False`.
+            If True, disables parallel computation during propagation. Default is False.
 
         Returns
         -------
         np.ndarray[np.floating]
-            Displacement field defined on the volume mesh, in the same
-            coordinate system as the input surface displacement.
+            Displacement field defined on the volume mesh nodes, in rescaled pysical coordinates.
 
         Notes
         -----
-        - The propagation is performed via
-          :meth:`Mesh.propagate_field_from_submesh`, which interpolates the
-          surface displacement onto the volume nodes.
-        - The method internally applies and then removes the rigid-body
-          rotation `self.Rmat` used during VIC initialization to ensure
-          consistency between surface and volume coordinate frames.
+        - Uses :meth:`Mesh.propagate_field_from_submesh` for surface-to-volume interpolation.
+        - Automatically applies `self.Rmat.T` to convert the input field from voxel
+        coordinates to the volumetric mesh's coordinate system.
+        - The volumetric mesh is assumed to be a parent of the internal surface
+        mesh. The nodes correspondence matrix between meshes is the one
+        constructed during the surface extraction step.
         """
-
         u_vol_field = volume_mesh.propagate_field_from_submesh(
             self.mesh,
-            self.Rmat @ u_field,
+            voxel_size * self.Rmat.T @ u_field,
             disable_parallel=disable_parallel,
         )
-        u_vol_field = self.Rmat.T @ u_vol_field
+        return u_vol_field
+
+    def propagate_displacement_to_volume_mesh(
+        self,
+        u_field: np.ndarray[np.floating],
+        volume_mesh: Mesh,
+        voxel_size: float = 1.0,
+        disable_parallel: bool = False,
+    ) -> np.ndarray[np.floating]:
+        """
+        Propagate a surface displacement field from voxel coordinates to a volumetric mesh
+        in physical coordinates.
+
+        The surface displacement field `u_field` is expressed in voxel coordinates.
+        It is automatically transformed by `self.Rmat.T` and scaled by `voxel_size`
+        to match the coordinate system of the target volumetric mesh `volume_mesh`.
+        Interpolation is performed using :meth:`Mesh.propagate_field_from_submesh`.
+        The returned displacement is expressed in the same coordinate system as the
+        volumetric mesh.
+
+        Parameters
+        ----------
+        u_field : np.ndarray[np.floating]
+            Surface displacement field in voxel coordinates, typically obtained from
+            :meth:`solve`.
+
+        volume_mesh : Mesh
+            Target volumetric mesh in physical coordinates (original coordinate
+            system).
+
+        voxel_size : float, optional
+            Scaling factor to convert voxel coordinates to the volumetric mesh coordinate
+            system. Default is `1.0`.
+
+        disable_parallel : bool, optional
+            If `True`, disables parallel computation during propagation. Default is `False`.
+
+        Returns
+        -------
+        np.ndarray[np.floating]
+            Displacement field defined on the volume mesh nodes, in physical
+            coordinates.
+
+        Notes
+        -----
+        - Uses :meth:`Mesh.propagate_field_from_submesh` for surface-to-volume interpolation.
+        - Automatically applies `self.Rmat.T` and scales the input field by `voxel_size`.
+        - The volumetric mesh is assumed to be the parent of the internal surface mesh.
+        The nodes correspondence matrix between meshes is the one constructed during
+        the surface extraction step.
+        """
+        u_vol_field = volume_mesh.propagate_field_from_submesh(
+            self.mesh,
+            voxel_size * self.Rmat.T @ u_field,
+            disable_parallel=disable_parallel,
+        )
         return u_vol_field

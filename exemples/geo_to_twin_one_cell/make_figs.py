@@ -329,3 +329,31 @@ pv_plotter.add_mesh(
 setup_camera(pv_plotter)
 pv_plotter.save_graphic("figs/twin_schema/simu.pdf")
 pv_plotter.show()
+
+# %% logo: plot von mises on deformed w/o colorbar
+
+interior_mesh = pv.read("out_simu/results_interior_0_0.vtu")
+elem_mesh = pv.read("out_simu/results_elements_borders_0_0.vtu")
+
+pv_plotter = pv.Plotter(window_size=(1080, 1080))
+n_colors = 15
+cmap = plt.colormaps["jet"].resampled(n_colors)
+warped_interior = interior_mesh.warp_by_vector(vectors="U")
+pv_plotter.add_mesh(
+    warped_interior,
+    scalars="von_mises",
+    cmap=cmap,
+    log_scale=True,
+    show_scalar_bar=False,
+)
+pv_plotter.add_mesh(
+    elem_mesh,
+    color="#e6ab02",
+    style="wireframe",
+    line_width=3,
+)
+setup_camera(pv_plotter)
+pv_plotter.screenshot("figs/logo.png")
+pv_plotter.show()
+
+# %%

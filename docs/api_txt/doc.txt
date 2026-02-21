@@ -343,7 +343,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
     fg_bg_method: Literal['otsu', 'interp'] = 'otsu',
     virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
     h: Optional[float] = None,
-    width_dx: float = 2.0,
+    width_dx: float = 0.5,
     surf_dx: float = 1.0,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
     C1_mode: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
@@ -424,6 +424,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
     self,
     u_field: numpy.ndarray[numpy.floating],
     volume_mesh: volVIC.Mesh.Mesh,
+    voxel_size: float = 1.0,
     disable_parallel: bool = False
 ) -> numpy.ndarray[numpy.floating]
 

@@ -301,7 +301,7 @@ def find_fg_bg(
             fig.savefig(save_file)
         plt.show()
 
-    return fg_value, bg_value
+    return float(fg_value), float(bg_value)
 
 
 def find_sigma_hat(image: np.ndarray[np.uint16], fg: float, bg: float) -> float:
@@ -341,11 +341,15 @@ def find_sigma_hat(image: np.ndarray[np.uint16], fg: float, bg: float) -> float:
     """
     gl_bg = image[image < bg]
     gl_fg = image[image > fg]
-    sigma_hat = np.sqrt(
-        (
-            gl_bg.size * (gl_bg.std(ddof=1) ** 2 + (gl_bg.mean() - bg) ** 2)
-            + gl_fg.size * (gl_fg.std(ddof=1) ** 2 + (gl_fg.mean() - fg) ** 2)
-        )
-        / (gl_bg.size + gl_fg.size)
-    )
+    if gl_bg.size == 0 and gl_fg.size == 0:
+        return 0
+    if gl_bg.size == 0:
+        bg_contrib = 0
+    else:
+        bg_contrib = gl_bg.size * (gl_bg.std(ddof=1) ** 2 + (gl_bg.mean() - bg) ** 2)
+    if gl_fg.size == 0:
+        fg_contrib = 0
+    else:
+        fg_contrib = gl_fg.size * (gl_fg.std(ddof=1) ** 2 + (gl_fg.mean() - fg) ** 2)
+    sigma_hat = np.sqrt((bg_contrib + fg_contrib) / (gl_bg.size + gl_fg.size))
     return sigma_hat

@@ -306,11 +306,11 @@ def make_C1_eqs(
             # c = plt.imshow(np.mean(np.array(tmp, dtype=float), axis=0))
             # plt.colorbar(c)
             # plt.show()
-        if verbose:
-            print(
-                f"[VIC][C1] mode=auto → kept {to_keep.sum()}/{indicator.size} triplets "
-                f"(threshold={threshold:.2g})"
-            )
+            if verbose:
+                print(
+                    f"[VIC][C1] mode=auto → kept {to_keep.sum()}/{indicator.size} triplets "
+                    f"(threshold={threshold:.2g})"
+                )
     elif mode == "manual":
         if C1_inds.ndim == 1:
             ABC = get_all_triplets(
