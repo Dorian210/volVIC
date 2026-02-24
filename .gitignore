@@ -32,9 +32,10 @@ tmp/
 *.pkl
 *.npy
 *.tiff
+examples/geo_to_twin_one_cell/figs
 
 # OS
 .DS_Store
 
 # Personnal
-context.txt
+exemples/BCC_11_4_4

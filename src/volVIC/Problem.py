@@ -2,6 +2,7 @@ from copy import deepcopy
 from functools import partial
 from typing import Union, Literal, Callable
 import numpy as np
+from numpy.typing import NDArray
 import scipy.sparse as sps
 import pyvista as pv
 import matplotlib.pyplot as plt
@@ -37,16 +38,16 @@ class Problem:
     mesh : Mesh
         Surface mesh used in the VIC problem.
 
-    image : np.ndarray
+    image : NDArray
         Image converted to floating-point format for computations.
 
     fg, bg : float
         Estimated or user-defined foreground and background gray levels.
 
-    Rmat : np.ndarray
+    Rmat : NDArray
         Rotation matrix resulting from ICP initialization.
 
-    tvec : np.ndarray
+    tvec : NDArray
         Translation vector resulting from ICP initialization.
 
     image_energies : list[VirtualImageCorrelationEnergyElem]
@@ -67,48 +68,48 @@ class Problem:
     initial_rho : float
         Initial value of the distance scaling parameter.
 
-    saved_data_0 : list[dict[str, np.ndarray]]
+    saved_data_0 : list[dict[str, NDArray]]
         Cached image energy data from the first iteration, used for
         post-processing and visualization.
     """
 
     mesh: Mesh
-    image: np.ndarray[np.uint16]
+    image: NDArray[np.uint16]
     fg: float
     bg: float
-    Rmat: np.ndarray[np.floating]
-    tvec: np.ndarray[np.floating]
+    Rmat: NDArray[np.floating]
+    tvec: NDArray[np.floating]
     image_energies: list[VirtualImageCorrelationEnergyElem]
     constraints: DirichletConstraintHandler
     dirichlet: Dirichlet
     membrane_K: sps.spmatrix
     membrane_weight: float
     initial_rho: float
-    saved_data_0: list[dict[str, np.ndarray[np.floating]]]
+    saved_data_0: list[dict[str, Union[NDArray[np.floating], float]]]
 
     def __init__(
         self,
         mesh: Mesh,
-        image: np.ndarray[np.uint16],
+        image: NDArray[np.uint16],
         ICP_init: bool = True,
         reversed_normals: bool = False,
         fg_bg: Union[tuple[float, float], None] = None,
         fg_bg_method: Literal["otsu", "interp"] = "otsu",
         virtual_image: Callable[
             [
-                np.ndarray[np.floating],
-                np.ndarray[np.floating],
-                np.ndarray[np.floating],
+                NDArray[np.floating],
+                NDArray[np.floating],
+                NDArray[np.floating],
                 float,
             ],
-            tuple[np.ndarray[np.floating], np.ndarray[np.floating]],
+            tuple[NDArray[np.floating], NDArray[np.floating]],
         ] = g_slide,
         h: Union[float, None] = None,
         width_dx: float = 0.5,
         surf_dx: float = 1.0,
         alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
         C1_mode: Union[
-            None, Literal["auto", "none", "all"], np.ndarray[np.integer]
+            None, Literal["auto", "none", "all"], NDArray[np.integer]
         ] = None,
         membrane_weight: Union[None, float] = None,
         initial_rho: float = 5.0,
@@ -147,7 +148,7 @@ class Problem:
             does not handle unit conversion or rescaling. ICP only corrects
             for rotation and translation, assuming consistent units.
 
-        image : np.ndarray[np.uint16]
+        image : NDArray[np.uint16]
             3D volumetric image (e.g. CT scan). The gray-level distribution is
             assumed to be bimodal (background / foreground).
 
@@ -201,7 +202,7 @@ class Problem:
             where each value specifies the ignored distance at the corresponding boundary.
             By default, `0`.
 
-        C1_mode : {"auto", "none", "all"} or np.ndarray or None, optional
+        C1_mode : {"auto", "none", "all"} or NDArray or None, optional
             Definition of C¹ continuity constraints between patches:
                 - `"auto"`: (default) automatically selected constraints (recommended)
                 - `"none"`: no C¹ constraints
@@ -271,9 +272,9 @@ class Problem:
         if reversed_normals:
             if verbose:
                 print("[VIC] Using reversed normals for virtual image")
-            g = partial(virtual_image, bg=self.bg, fg=self.fg)
+            g = partial(virtual_image, bg=self.bg, fg=self.fg)  # type: ignore
         else:
-            g = partial(virtual_image, bg=self.fg, fg=self.bg)
+            g = partial(virtual_image, bg=self.fg, fg=self.bg)  # type: ignore
 
         # --- Image energies -----------------------------------------------------------
         if verbose:
@@ -339,10 +340,6 @@ class Problem:
 
         self.initial_rho = initial_rho
 
-        # self.image = self.image.astype(
-        #     float
-        # )  # TODO remove casting by adapting interpolation
-
         if verbose:
             print("[VIC] Initialization done ✔")
 
@@ -389,7 +386,7 @@ class Problem:
         h: Union[float, None] = None,
         disable_parallel: bool = False,
         verbose: bool = True,
-    ):
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating], float]:
         """
         Initialize the mesh placement and the normal search half-width `h`.
 
@@ -432,45 +429,51 @@ class Problem:
 
         Returns
         -------
-        Rmat : np.ndarray
+        Rmat : NDArray
             3x3 rotation matrix resulting from the ICP alignment.
             Identity if no ICP is performed.
 
-        tvec : np.ndarray
+        tvec : NDArray
             Translation vector resulting from the ICP alignment.
             Zero vector if no ICP is performed.
 
         h : float
             Initialized normal search half-width.
         """
-        compute_h = h is None
-        if ICP_init or compute_h:
+        if ICP_init or h is None:
             stl_mc = marching_cubes(self.image, 0.5 * (self.fg + self.bg))
             if ICP_init:
                 Rmat, tvec, max_dist = self.mesh.ICP_rigid_body_transform(
                     stl_mc, disable_parallel=disable_parallel, plot_after=verbose
                 )
-                if compute_h:
-                    h = max_dist + 1.0
+                if h is None:
+                    computed_h = max_dist + 1.0
+                else:
+                    computed_h = h
                 if verbose:
-                    print(f"[VIC] ICP done | max_dist={max_dist:.3g}, h={h:.3g}")
+                    print(
+                        f"[VIC] ICP done | max_dist={max_dist:.3g}, h={computed_h:.3g}"
+                    )
             else:
                 Rmat = np.eye(3)
                 tvec = np.zeros(3)
-                if compute_h:
+                if h is None:
                     distance_mesh = self.mesh.distance_to_meshio(stl_mc)
                     max_dist = np.abs(
                         distance_mesh.point_data["implicit_distance"]
                     ).max()
-                    h = max_dist + 1.0
+                    computed_h = max_dist + 1.0
                     if verbose:
                         print(
-                            f"[VIC] h from distance field | max_dist={max_dist:.3g}, h={h:.3g}"
+                            f"[VIC] h from distance field | max_dist={max_dist:.3g}, h={computed_h:.3g}"
                         )
+                else:
+                    computed_h = h
         else:
             Rmat = np.eye(3)
             tvec = np.zeros(3)
-        return Rmat, tvec, h
+            computed_h = h
+        return Rmat, tvec, computed_h
 
     def make_membrane_weight(
         self,
@@ -513,7 +516,7 @@ class Problem:
         if rho is None:
             rho = self.initial_rho
         image_std = find_sigma_hat(self.image, self.fg, self.bg)
-        self.membrane_weight = make_membrane_weight(
+        membrane_weight = make_membrane_weight(
             self.mesh,
             self.image_energies,
             self.membrane_K,
@@ -522,6 +525,8 @@ class Problem:
             expected_mean_dist=expected_mean_dist,
             n_intg=n_intg,
         )
+        self.membrane_weight = membrane_weight
+        return membrane_weight
 
     def make_dirichlet(self):
         """
@@ -543,11 +548,11 @@ class Problem:
 
     def one_gauss_newton_iter(
         self,
-        u_field: np.ndarray[np.floating],
+        u_field: NDArray[np.floating],
         rho: float,
         verbose: bool = True,
         disable_parallel: bool = False,
-    ) -> tuple[float, np.ndarray[np.floating], sps.spmatrix, float, float]:
+    ) -> tuple[NDArray[np.floating], float]:
         """
         Perform a single Gauss-Newton iteration for the VIC problem.
 
@@ -558,7 +563,7 @@ class Problem:
 
         Parameters
         ----------
-        u_field : np.ndarray
+        u_field : NDArray[np.floating]
             Current displacement field of the mesh nodes, shape (3, N).
 
         rho : float
@@ -574,7 +579,7 @@ class Problem:
 
         Returns
         -------
-        du_field : np.ndarray
+        du_field : NDArray[np.floating]
             Incremental displacement field computed during this iteration.
 
         drho : float
@@ -596,13 +601,13 @@ class Problem:
 
     def solve(
         self,
-        u_field: np.ndarray[np.floating] = None,
-        rho: float = None,
+        u_field: Union[NDArray[np.floating], None] = None,
+        rho: Union[float, None] = None,
         eps: float = 5e-2,
         max_iter: int = 20,
         verbose: bool = True,
         disable_parallel: bool = False,
-    ) -> tuple[np.ndarray[np.floating], float]:
+    ) -> tuple[NDArray[np.floating], float]:
         """
         Solve the VIC problem using a Gauss-Newton optimization.
 
@@ -620,7 +625,7 @@ class Problem:
 
         Parameters
         ----------
-        u_field : np.ndarray, optional
+        u_field : NDArray[np.floating], optional
             Initial displacement field of shape (3, N). If `None` (default),
             initializes to zero.
 
@@ -645,7 +650,7 @@ class Problem:
 
         Returns
         -------
-        u_field : np.ndarray
+        u_field : NDArray[np.floating]
             Final displacement field after convergence or reaching `max_iter`.
 
         rho : float
@@ -659,28 +664,30 @@ class Problem:
         if u_field is None:
             u_field = np.zeros((3, self.mesh.connectivity.nb_unique_nodes))
         if rho is None:
-            rho = self.initial_rho
+            current_rho = self.initial_rho
+        else:
+            current_rho = rho
         for i in range(max_iter):
             du_field, drho = self.one_gauss_newton_iter(
-                u_field, rho, verbose=verbose, disable_parallel=disable_parallel
+                u_field, current_rho, verbose=verbose, disable_parallel=disable_parallel
             )
             u_field += du_field
-            rho += drho
-            rho = np.clip(rho, 0.1, 0.95 * self.image_energies[0].h)
+            current_rho += drho
+            current_rho = np.clip(current_rho, 0.1, 0.95 * self.image_energies[0].h)
             if i == 0:
                 self.saved_data_0 = [
                     deepcopy(e.saved_data) for e in self.image_energies
                 ]
             du_u = np.linalg.norm(du_field) / np.linalg.norm(u_field)
             if verbose:
-                print(f"iter = {i}, rho = {rho:.4f}, du/u = {du_u:.2E}")
+                print(f"iter = {i}, rho = {current_rho:.4f}, du/u = {du_u:.2E}")
             if du_u < eps:
                 break
-        return u_field, rho
+        return u_field, current_rho
 
     def save_paraview(
         self,
-        u_field: np.ndarray[np.floating],
+        u_field: NDArray[np.floating],
         folder: str,
         name: str,
         disable_parallel: bool = False,
@@ -703,7 +710,7 @@ class Problem:
 
         Parameters
         ----------
-        u_field : np.ndarray
+        u_field : NDArray
             Displacement field of shape (3, N) to be saved.
 
         folder : str
@@ -753,7 +760,7 @@ class Problem:
 
     def plot_results(
         self,
-        u_field: Union[None, np.ndarray[np.floating]] = None,
+        u_field: Union[None, NDArray[np.floating]] = None,
         disable_parallel: bool = False,
         verbose: bool = True,
         n_colors: int = 15,
@@ -782,7 +789,7 @@ class Problem:
 
         Parameters
         ----------
-        u_field : np.ndarray or None, optional
+        u_field : NDArray or None, optional
             Displacement field to apply to the mesh for visualization. If `None`
             (default), the distances from the first iteration (`self.saved_data_0`)
             are displayed. If provided, the mesh is warped according to this
@@ -859,7 +866,7 @@ class Problem:
                 verbose=verbose,
             )
             mesh = deepcopy(self.mesh)
-            mesh.unique_ctrl_pts.flat += u_field.ravel()
+            mesh.unique_ctrl_pts += u_field.reshape(mesh.unique_ctrl_pts.shape)
 
         cmap = plt.colormaps["RdBu"].resampled(n_colors)
         pv_add_mesh_kwargs.setdefault("cmap", cmap)
@@ -897,62 +904,11 @@ class Problem:
 
     def propagate_displacement_to_volume_mesh(
         self,
-        u_field: np.ndarray[np.floating],
+        u_field: NDArray[np.floating],
         volume_mesh: Mesh,
         voxel_size: float = 1.0,
         disable_parallel: bool = False,
-    ) -> np.ndarray[np.floating]:
-        """
-        Propagate a surface displacement field from voxel coordinates to a volumetric mesh
-        in the original rescaled coordinate system.
-
-        The surface displacement field `u_field` is expressed in voxel coordinates.
-        It is automatically transformed by `self.Rmat.T` to the rescaled coordinates
-        of the target volumetric mesh `volume_mesh`, and interpolated using
-        :meth:`Mesh.propagate_field_from_submesh`. The returned displacement is
-        expressed in the same coordinate system as the volumetric mesh.
-
-        Parameters
-        ----------
-        u_field : np.ndarray[np.floating]
-            Surface displacement field in voxel coordinates, typically obtained from
-            :meth:`solve`.
-
-        volume_mesh : Mesh
-            Target volumetric mesh in rescaled coordinates (original coordinate system
-            rescaled by the voxel size).
-
-        disable_parallel : bool, optional
-            If True, disables parallel computation during propagation. Default is False.
-
-        Returns
-        -------
-        np.ndarray[np.floating]
-            Displacement field defined on the volume mesh nodes, in rescaled pysical coordinates.
-
-        Notes
-        -----
-        - Uses :meth:`Mesh.propagate_field_from_submesh` for surface-to-volume interpolation.
-        - Automatically applies `self.Rmat.T` to convert the input field from voxel
-        coordinates to the volumetric mesh's coordinate system.
-        - The volumetric mesh is assumed to be a parent of the internal surface
-        mesh. The nodes correspondence matrix between meshes is the one
-        constructed during the surface extraction step.
-        """
-        u_vol_field = volume_mesh.propagate_field_from_submesh(
-            self.mesh,
-            voxel_size * self.Rmat.T @ u_field,
-            disable_parallel=disable_parallel,
-        )
-        return u_vol_field
-
-    def propagate_displacement_to_volume_mesh(
-        self,
-        u_field: np.ndarray[np.floating],
-        volume_mesh: Mesh,
-        voxel_size: float = 1.0,
-        disable_parallel: bool = False,
-    ) -> np.ndarray[np.floating]:
+    ) -> NDArray[np.floating]:
         """
         Propagate a surface displacement field from voxel coordinates to a volumetric mesh
         in physical coordinates.
@@ -966,7 +922,7 @@ class Problem:
 
         Parameters
         ----------
-        u_field : np.ndarray[np.floating]
+        u_field : NDArray[np.floating]
             Surface displacement field in voxel coordinates, typically obtained from
             :meth:`solve`.
 
@@ -983,7 +939,7 @@ class Problem:
 
         Returns
         -------
-        np.ndarray[np.floating]
+        NDArray[np.floating]
             Displacement field defined on the volume mesh nodes, in physical
             coordinates.
 

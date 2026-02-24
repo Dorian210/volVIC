@@ -1,6 +1,8 @@
 # %%
-from typing import Callable, Iterable, Literal, Union
+from collections.abc import Sequence
+from typing import Callable, Literal, Union
 import numpy as np
+from numpy.typing import NDArray
 import scipy.sparse as sps
 import pyvista as pv
 import meshio as io
@@ -14,7 +16,7 @@ from volVIC.marching_cubes import marching_cubes
 
 def in_notebook() -> bool:
     try:
-        from IPython import get_ipython
+        from IPython import get_ipython  # type: ignore
 
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
@@ -41,23 +43,23 @@ class Mesh:
         Multi-patch connectivity structure.
     splines : list[BSpline]
         List of B-spline objects for each patch.
-    unique_ctrl_pts : np.ndarray
+    unique_ctrl_pts : NDArray
         Array of unique control points for the entire mesh.
-    ref_inds : np.ndarray
+    ref_inds : NDArray
         Reference indices used for linking to submeshes.
     """
 
     connectivity: MultiPatchBSplineConnectivity
     splines: list[BSpline]
-    unique_ctrl_pts: np.ndarray[np.floating]
-    ref_inds: np.ndarray[np.integer]
+    unique_ctrl_pts: NDArray[np.floating]
+    ref_inds: NDArray[np.integer]
 
     def __init__(
         self,
         splines: list[BSpline],
-        ctrl_pts: Union[list[np.ndarray[np.floating]], np.ndarray[np.floating]],
+        ctrl_pts: Union[list[NDArray[np.floating]], NDArray[np.floating]],
         connectivity: Union[MultiPatchBSplineConnectivity, None] = None,
-        ref_inds: Union[np.ndarray[np.integer], None] = None,
+        ref_inds: Union[NDArray[np.integer], None] = None,
     ):
         """
         Initialize a multi-patch B-spline mesh.
@@ -73,7 +75,7 @@ class Mesh:
         splines : list[BSpline]
             List of `BSpline` objects for each patch.
 
-        ctrl_pts : list[np.ndarray] or np.ndarray
+        ctrl_pts : list[NDArray] or NDArray
             Control points of the mesh.
             - If a list of arrays is provided, each array corresponds to a patch
             (shape: `(dim_phys, n1, ..., nd)`).
@@ -84,7 +86,7 @@ class Mesh:
             Multi-patch connectivity object. If `None`, it is automatically inferred
             from separated control points.
 
-        ref_inds : np.ndarray, optional
+        ref_inds : NDArray, optional
             Reference indices mapping control points to submeshes or external data.
             If `None`, defaults to `np.arange(nb_unique_nodes)`.
 
@@ -101,8 +103,8 @@ class Mesh:
                     "Can only infer connectivity from separated control points list."
                 )
             self.connectivity = MultiPatchBSplineConnectivity.from_separated_ctrlPts(
-                ctrl_pts
-            )
+                ctrl_pts  # type: ignore
+            )  # type: ignore
         else:
             self.connectivity = connectivity
         self.splines = splines
@@ -138,7 +140,7 @@ class Mesh:
         if hasattr(self, "_screenshot"):
             import matplotlib.pyplot as plt
 
-            plt.imshow(self._screenshot)
+            plt.imshow(self._screenshot)  # type: ignore
             plt.axis("off")
             plt.title("Screenshot of last plot")
             plt.show()
@@ -181,14 +183,14 @@ class Mesh:
 
         Parameters
         ----------
-        field : list[np.ndarray]
+        field : list[NDArray]
             Field separated per patch.
         method : optional
             Agglomeration method passed to :meth:`MultiPatchBSplineConnectivity.agglomerate`.
 
         Returns
         -------
-        np.ndarray
+        NDArray
             Field in the unique/global representation.
         """
         if method is None:
@@ -204,43 +206,43 @@ class Mesh:
 
         Parameters
         ----------
-        field : np.ndarray
+        field : NDArray
             Field in unique/global representation.
 
         Returns
         -------
-        list[np.ndarray]
+        list[NDArray]
             Field separated per patch.
         """
         return self.connectivity.separate(self.connectivity.unpack(field))
 
-    def get_separated_ctrl_pts(self) -> list[np.ndarray[np.floating]]:
+    def get_separated_ctrl_pts(self) -> list[NDArray[np.floating]]:
         """
         Return the control points as a list of arrays, one per patch.
 
         Returns
         -------
-        list[np.ndarray]
+        list[NDArray]
             Control points separated per patch.
         """
         return self.unique_to_separated(self.unique_ctrl_pts)
 
-    def set_separated_ctrl_pts(self, separated_ctrl_pts: list[np.ndarray[np.floating]]):
+    def set_separated_ctrl_pts(self, separated_ctrl_pts: list[NDArray[np.floating]]):
         """
         Set the mesh control points from a list of arrays (one per patch).
 
         Parameters
         ----------
-        separated_ctrl_pts : list[np.ndarray]
+        separated_ctrl_pts : list[NDArray]
             Control points separated per patch.
         """
         self.unique_ctrl_pts = self.separated_to_unique(separated_ctrl_pts)
 
     def __call__(
         self,
-        XI: Iterable[tuple[np.ndarray[np.floating], ...]],
-        k: Union[Iterable[Union[int, tuple[int, ...]]], int] = 0,
-        data: Union[np.ndarray, Iterable[np.ndarray]] = None,
+        XI: Sequence[tuple[NDArray[np.floating], ...]],
+        k: Union[Sequence[Union[int, tuple[int, ...]]], int] = 0,
+        data: Union[NDArray, Sequence[NDArray], None] = None,
     ) -> list:
         """
         Evaluate the mesh (B-spline patches) at given parametric points.
@@ -253,13 +255,13 @@ class Mesh:
 
         Parameters
         ----------
-        XI : iterable of tuple of np.ndarray
+        XI : list of tuple of NDArray
             Isoparametric coordinates for evaluation, provided per patch.
-        k : int or iterable of int/tuple, optional
+        k : int or list of int/tuple, optional
             Degree of derivative to compute at each evaluation point. Can be a single
-            integer applied to all patches or an iterable specifying values per patch.
+            integer applied to all patches or a sequence specifying values per patch.
             Default is 0 (function value).
-        data : np.ndarray or iterable of np.ndarray, optional
+        data : NDArray or list of NDArray, optional
             Field values to use for evaluation. If `None` (default), uses the current
             control points. Can be a single array in unique/global representation
             or a list of arrays per patch.
@@ -271,34 +273,34 @@ class Mesh:
         """
         if isinstance(k, int):
             k = [k] * self.connectivity.nb_patchs
-        elif isinstance(k, Iterable):
+        elif isinstance(k, Sequence):
             if len(k) != self.connectivity.nb_patchs:
                 raise ValueError(
                     f"Expected {self.connectivity.nb_patchs} entries in 'k', got {len(k)}."
                 )
         else:
             raise TypeError(
-                f"'k' must be an int or an iterable of ints/tuples, got {type(k).__name__}."
+                f"'k' must be an int or a sequence of ints/tuples, got {type(k).__name__}."
             )
         if data is None:
             data = self.get_separated_ctrl_pts()
         elif isinstance(data, np.ndarray):
             data = self.unique_to_separated(data)
-        elif isinstance(data, Iterable) and not isinstance(data, (str, bytes)):
+        elif isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
             if len(data) != self.connectivity.nb_patchs:
                 raise ValueError(
                     f"Expected {self.connectivity.nb_patchs} data arrays, got {len(data)}."
                 )
         else:
             raise TypeError(
-                "'data' must be None, a NumPy array, or an iterable of NumPy arrays."
+                "'data' must be None, a NumPy array, or a sequence of NumPy arrays."
                 f" Got object of type {type(data).__name__}."
             )
         all_args = list(zip(data, XI, k))
         results = parallel_blocks(self.splines, all_args, pbar_title="Evaluate mesh")
         return results
 
-    def assemble_grads(self, terms: list[np.ndarray], field_size: int) -> np.ndarray:
+    def assemble_grads(self, terms: list[NDArray], field_size: int) -> NDArray:
         """
         Assemble patch-wise gradient vectors into a global gradient vector.
 
@@ -312,7 +314,7 @@ class Mesh:
 
         Parameters
         ----------
-        terms : list of np.ndarray
+        terms : list of NDArray
             Gradient vectors for each patch, typically computed from patch-local
             operations.
         field_size : int
@@ -320,7 +322,7 @@ class Mesh:
 
         Returns
         -------
-        np.ndarray
+        NDArray
             Global gradient vector of size `field_size * nb_unique_nodes`.
 
         Notes
@@ -380,7 +382,7 @@ class Mesh:
         )
         for patch, mat in enumerate(terms):
             inds = separated_inds[patch].ravel()
-            mat = mat.tocoo()
+            mat = mat.tocoo()  # type: ignore
             rows.append(inds[mat.row])
             cols.append(inds[mat.col])
             data.append(mat.data)
@@ -419,7 +421,7 @@ class Mesh:
             list(border_splines), border_ctrl_pts, border_connectivity, border_ref_inds
         )
 
-    def subset(self, patchs_to_keep: np.ndarray[np.integer]) -> "Mesh":
+    def subset(self, patchs_to_keep: NDArray[np.integer]) -> "Mesh":
         """
         Create a submesh containing only the specified patches.
 
@@ -429,7 +431,7 @@ class Mesh:
 
         Parameters
         ----------
-        patchs_to_keep : np.ndarray of int
+        patchs_to_keep : NDArray of int
             Array of patch indices to retain in the submesh.
 
         Returns
@@ -449,7 +451,7 @@ class Mesh:
         splines = np.empty(self.connectivity.nb_patchs, dtype=object)
         splines[:] = self.splines
         subset_connectivity, subset_splines, full_to_subset = self.connectivity.subset(
-            splines, patchs_to_keep
+            splines.tolist(), patchs_to_keep
         )
         subset_ctrl_pts = self.unique_ctrl_pts[..., full_to_subset]
         subset_ref_inds = self.ref_inds[full_to_subset]
@@ -459,10 +461,10 @@ class Mesh:
 
     def propagate_field(
         self,
-        field_values: np.ndarray[np.floating],
-        indices: np.ndarray[np.integer],
+        field_values: NDArray[np.floating],
+        indices: NDArray[np.integer],
         disable_parallel: bool = False,
-    ) -> np.ndarray[np.floating]:
+    ) -> NDArray[np.floating]:
         """
         Propagate a field defined on a subset of nodes to the entire mesh using IDW.
 
@@ -473,17 +475,17 @@ class Mesh:
 
         Parameters
         ----------
-        field_values : np.ndarray of float
+        field_values : NDArray of float
             Field values at known nodes, shape `(dof, n_known)` or `(n_known,)`.
             Must be of `float` type for IDW interpolation.
-        indices : np.ndarray of int
+        indices : NDArray of int
             Indices of the known nodes in `self.unique_ctrl_pts`.
         disable_parallel : bool, optional
             If `True`, disables parallel computation in the IDW interpolation. Default is `False`.
 
         Returns
         -------
-        np.ndarray of float
+        NDArray of float
             Field values propagated to all nodes of the mesh, same dtype as input.
 
         Notes
@@ -509,9 +511,9 @@ class Mesh:
     def propagate_field_from_submesh(
         self,
         submesh: "Mesh",
-        field_values: np.ndarray[np.floating],
+        field_values: NDArray[np.floating],
         disable_parallel: bool = False,
-    ) -> np.ndarray[np.floating]:
+    ) -> NDArray[np.floating]:
         """
         Propagate a field from a submesh to the full mesh using IDW interpolation.
 
@@ -523,14 +525,14 @@ class Mesh:
         ----------
         submesh : Mesh
             Submesh containing the nodes where the field is defined.
-        field_values : np.ndarray of float
+        field_values : NDArray of float
             Field values defined on the submesh nodes. Must be of `float` type for IDW.
         disable_parallel : bool, optional
             If `True`, disables parallel computation in the IDW interpolation. Default is `False`.
 
         Returns
         -------
-        np.ndarray of float
+        NDArray of float
             Field values propagated to all nodes of the full mesh.
 
         Notes
@@ -550,11 +552,11 @@ class Mesh:
 
     def get_orientation_field(
         self,
-        n_eval_per_elem: int = 5,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 5,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
         verbose: bool = True,
         disable_parallel: bool = False,
-    ) -> list[np.ndarray[np.floating]]:
+    ) -> list[NDArray[np.floating]]:
         """
         Compute the orientation field of a 3D multipatch B-spline mesh.
 
@@ -564,10 +566,10 @@ class Mesh:
 
         Parameters
         ----------
-        n_eval_per_elem : int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element along each parametric direction.
             Default is `5`.
-        XI_list : iterable of tuple of np.ndarray, optional
+        XI_list : list of tuple of NDArray, optional
             Predefined parametric coordinates for each patch. If `None`, a regular grid
             is generated using `n_eval_per_elem`.
         verbose : bool, optional
@@ -577,7 +579,7 @@ class Mesh:
 
         Returns
         -------
-        list of np.ndarray of float
+        list of NDArray of float
             A `list` (one entry per patch) containing the orientation scalar field
             for at each evaluation point.
 
@@ -700,15 +702,15 @@ class Mesh:
             inds[i] = inds[i][flip]
             for separated_field in separated_fields:
                 separated_field[i] = separated_field[i][flip]
-        self.connectivity.unique_nodes_inds = self.connectivity.agglomerate(inds)
+        self.connectivity.unique_nodes_inds = self.connectivity.agglomerate(inds)  # type: ignore
         self.unique_ctrl_pts = self.separated_to_unique(separated_ctrl_pts)
 
         return separated_fields
 
     def plot_orientation(
         self,
-        n_eval_per_elem: Union[int, Iterable[int]] = 5,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 5,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
         verbose: bool = True,
         disable_parallel: bool = False,
         **kwargs,
@@ -726,11 +728,11 @@ class Mesh:
 
         Parameters
         ----------
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element along each parametric direction.
-            If an iterable is provided, it must match the parametric dimension.
+            If a list is provided, it must match the parametric dimension.
             Default is `5`.
-        XI_list : iterable of tuple of ndarray, optional
+        XI_list : list of tuple of ndarray, optional
             Parametric coordinates at which the orientation field is evaluated,
             one entry per patch. If `None` (default), a uniform sampling is used
             for each patch.
@@ -784,10 +786,10 @@ class Mesh:
 
     def plot(
         self,
-        n_eval_per_elem: Union[int, Iterable[int]] = 10,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
-        unique_field: Union[np.ndarray, None] = None,
-        separated_field: Union[list[np.ndarray], list[callable], None] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 10,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
+        unique_field: Union[NDArray, None] = None,
+        separated_field: Union[list[NDArray], list[Callable], None] = None,
         interior_only: bool = True,
         plt_ctrl_mesh: bool = False,
         verbose: bool = True,
@@ -807,17 +809,17 @@ class Mesh:
 
         Parameters
         ----------
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element along each parametric direction.
-            If an iterable is provided, it must match the parametric dimension.
+            If a sequence is provided, its length must match the parametric dimension.
             Default is `10`.
-        XI_list : iterable of tuple of np.ndarray, optional
+        XI_list : list of tuple of NDArray, optional
             Explicit parametric coordinates for evaluation, provided per patch.
             If `None`, a regular grid based on `n_eval_per_elem` is used.
-        unique_field : np.ndarray, optional
+        unique_field : NDArray, optional
             Field defined on the unique control points of the mesh. Mutually exclusive
             with `separated_field`.
-        separated_field : list of np.ndarray or list of callable, optional
+        separated_field : list of NDArray or list of callable, optional
             Field defined per patch, either as arrays evaluated on parametric grids
             or as callables evaluated at runtime. Mutually exclusive with `unique_field`.
         interior_only : bool, optional
@@ -869,10 +871,10 @@ class Mesh:
             unique_fields = {}
             if isinstance(separated_field[0], Callable):
                 separated_fields = [
-                    {"": lambda *args: field(*args)[None]} for field in separated_field
+                    {"": lambda *args: field(*args)[None]} for field in separated_field  # type: ignore
                 ]
             else:
-                separated_fields = [{"": field[None]} for field in separated_field]
+                separated_fields = [{"": field[None]} for field in separated_field]  # type: ignore
         else:
             unique_fields = {}
             separated_fields = None
@@ -891,7 +893,7 @@ class Mesh:
             disable_parallel=disable_parallel,
             verbose=verbose,
         )
-        pv_plotter.add_mesh(elem_int_mesh, **pv_add_mesh_kwargs)
+        pv_plotter.add_mesh(elem_int_mesh, **pv_add_mesh_kwargs)  # type: ignore
         if not interior_only:
             (elem_sep_mesh,) = self.connectivity.make_elem_separator_meshes(
                 self.splines,
@@ -906,7 +908,7 @@ class Mesh:
                 del pv_add_mesh_kwargs["label"]
             pv_add_mesh_kwargs["style"] = "wireframe"
             pv_add_mesh_kwargs["color"] = elem_sep_color
-            pv_plotter.add_mesh(elem_sep_mesh, **pv_add_mesh_kwargs)
+            pv_plotter.add_mesh(elem_sep_mesh, **pv_add_mesh_kwargs)  # type: ignore
             if plt_ctrl_mesh:
                 (ctrl_poly_mesh,) = self.connectivity.make_control_poly_meshes(
                     self.splines,
@@ -914,11 +916,9 @@ class Mesh:
                     n_step=1,
                     n_eval_per_elem=n_eval_per_elem,
                     XI_list=XI_list,
-                    disable_parallel=disable_parallel,
-                    verbose=verbose,
                 )
                 pv_add_mesh_kwargs["color"] = ctrl_poly_color
-                pv_plotter.add_mesh(ctrl_poly_mesh, **pv_add_mesh_kwargs)
+                pv_plotter.add_mesh(ctrl_poly_mesh, **pv_add_mesh_kwargs)  # type: ignore
 
         if show:
             pv_plotter.show()
@@ -929,12 +929,12 @@ class Mesh:
 
     def plot_in_image(
         self,
-        image: np.ndarray,
+        image: NDArray,
         threshold: Union[float, None] = None,
         threshold_method: Literal["otsu", "interp"] = "otsu",
         mode: Literal["marching cubes", "voxels"] = "marching cubes",
-        n_eval_per_elem: Union[int, Iterable[int]] = 10,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 10,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
         interior_only: bool = True,
         plt_ctrl_mesh: bool = False,
         verbose: bool = True,
@@ -958,7 +958,7 @@ class Mesh:
 
         Parameters
         ----------
-        image : np.ndarray
+        image : NDArray
             Input volumetric image of shape (n1, n2, n3).
         threshold : float or None, optional
             Threshold value used to extract the image surface. If `None`, it is
@@ -969,10 +969,10 @@ class Mesh:
         mode : {"marching cubes", "voxels"}, optional
             Method used to extract the image surface. If `"marching cubes"`,
             the image must be of dtype `uint16`. Default is `"marching cubes"`.
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element along each parametric direction.
             Default is `10`.
-        XI_list : iterable of tuple of np.ndarray, optional
+        XI_list : list of tuple of NDArray, optional
             Explicit parametric coordinates for mesh evaluation.
         interior_only : bool, optional
             If `True`, only interior elements of the mesh are displayed. Default is `True`.
@@ -1033,7 +1033,7 @@ class Mesh:
         )
 
         pv_plotter.add_mesh(
-            image_mesh,
+            image_mesh,  # type: ignore
             show_edges=image_show_edges,
             edge_color=image_edge_color,
             line_width=image_line_width,
@@ -1050,11 +1050,11 @@ class Mesh:
     def ICP_rigid_body_transform(
         self,
         tgt_meshio: io.Mesh,
-        n_eval_per_elem: Union[int, Iterable[int]] = 5,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 5,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
         plot_after: bool = True,
         disable_parallel: bool = False,
-    ) -> tuple[np.ndarray[np.floating], np.ndarray[np.floating], float]:
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating], float]:
         """
         Compute and apply a rigid body transformation aligning the mesh to a target mesh.
 
@@ -1067,12 +1067,12 @@ class Mesh:
         ----------
         tgt_meshio : io.Mesh
             Target mesh used as reference for the alignment.
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element for each parametric dimension.
             If an integer is provided, the same value is used for all dimensions.
-            If an iterable is provided, each value corresponds to one parametric
+            If a sequence is provided, each value corresponds to one parametric
             direction. Default is `5`.
-        XI_list : iterable of tuple of ndarray, optional
+        XI_list : list of tuple of ndarray, optional
             Parametric coordinates at which the geometry is evaluated to generate
             the source surface mesh. If provided, this overrides `n_eval_per_elem`.
         plot_after : bool, optional
@@ -1083,9 +1083,9 @@ class Mesh:
 
         Returns
         -------
-        Rmat : np.ndarray of float, shape (3, 3)
+        Rmat : NDArray of float, shape (3, 3)
             Rotation matrix of the rigid body transformation.
-        tvec : np.ndarray of float, shape (3,)
+        tvec : NDArray of float, shape (3,)
             Translation vector of the rigid body transformation.
         max_dist : float
             Maximum absolute distance between the aligned source mesh and the
@@ -1125,7 +1125,7 @@ class Mesh:
             max_iterations=100,
             start_by_matching_centroids=True,
             return_matrix=True,
-        )
+        )  # type: ignore
 
         # Decompose transformation matrix
         Rmat = matrix[:3, :3]
@@ -1140,7 +1140,7 @@ class Mesh:
                 aligned, color="blue", opacity=0.8, label="Aligned surface mesh"
             )
             plotter.add_mesh(tgt, color="red", opacity=0.5, label="STL Marching Cubes")
-            plotter.add_legend()
+            plotter.add_legend()  # type: ignore
             plotter.show()
 
         # Compute max distance between aligned and target meshes
@@ -1153,8 +1153,8 @@ class Mesh:
     def distance_to_meshio(
         self,
         tgt_meshio: io.Mesh,
-        n_eval_per_elem: Union[int, Iterable[int]] = 5,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        n_eval_per_elem: Union[int, Sequence[int]] = 5,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
     ) -> io.Mesh:
         """
         Compute the signed distance field to a target mesh.
@@ -1167,10 +1167,10 @@ class Mesh:
         ----------
         tgt_meshio : io.Mesh
             Target mesh defining the reference surface.
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element for each parametric dimension.
             Default is `5`.
-        XI_list : iterable of tuple of ndarray, optional
+        XI_list : list of tuple of ndarray, optional
             Parametric coordinates at which the geometry is evaluated.
             If provided, this overrides `n_eval_per_elem`.
 
@@ -1205,10 +1205,10 @@ class Mesh:
         path: str,
         name: str,
         n_step: int = 1,
-        n_eval_per_elem: Union[int, Iterable[int]] = 10,
+        n_eval_per_elem: Union[int, Sequence[int]] = 10,
         unique_fields: dict = {},
         separated_fields: Union[list[dict], None] = None,
-        XI_list: Union[None, Iterable[tuple[np.ndarray[np.floating], ...]]] = None,
+        XI_list: Union[None, Sequence[tuple[NDArray[np.floating], ...]]] = None,
         groups: Union[dict[str, dict[str, Union[str, int]]], None] = None,
         make_pvd: bool = True,
         verbose: bool = True,
@@ -1237,10 +1237,10 @@ class Mesh:
             Base name used for all output files.
         n_step : int, optional
             Number of time steps to export. Default is `1`.
-        n_eval_per_elem : int or iterable of int, optional
+        n_eval_per_elem : int or list of int, optional
             Number of evaluation points per element for each parametric dimension.
             If an integer is provided, the same value is used for all dimensions.
-            If an iterable is provided, each value corresponds to one parametric
+            If a sequence is provided, each value corresponds to one parametric
             direction. Default is `10`.
         unique_fields : dict, optional
             Fields defined on unique control points to be exported.
@@ -1252,7 +1252,7 @@ class Mesh:
             mapping field names to field values. See
             `MultiPatchBSplineConnectivity.save_paraview` for supported
             formats.
-        XI_list : iterable of tuple of ndarray, optional
+        XI_list : list of tuple of ndarray, optional
             Parametric coordinates at which the geometry and fields are evaluated.
             If provided, this overrides `n_eval_per_elem`.
         groups : dict, optional
@@ -1361,9 +1361,9 @@ class MeshLattice(Mesh):
         m: int,
         n: int,
         splines_cell: list[BSpline],
-        ctrl_pts: Union[list[np.ndarray[np.floating]], np.ndarray[np.floating]],
+        ctrl_pts: Union[list[NDArray[np.floating]], NDArray[np.floating]],
         connectivity: Union[MultiPatchBSplineConnectivity, None] = None,
-        ref_inds: Union[np.ndarray[np.integer], None] = None,
+        ref_inds: Union[NDArray[np.integer], None] = None,
     ):
         """
         Initialize a lattice mesh from a reference B-spline cell.
@@ -1379,13 +1379,13 @@ class MeshLattice(Mesh):
             Number of repetitions along the third lattice direction.
         splines_cell : list of BSpline
             B-spline patches defining a single reference cell.
-        ctrl_pts : list of np.ndarray or np.ndarray
+        ctrl_pts : list of NDArray or NDArray
             Control points of the full lattice structure, in separated or unique
             representation.
         connectivity : MultiPatchBSplineConnectivity or None, optional
             Connectivity describing the multipatch topology of the full lattice
             structure. If `None` (default), it is inferred automatically.
-        ref_inds : np.ndarray of int or None, optional
+        ref_inds : NDArray of int or None, optional
             Optional reference indices associated with the control points.
         """
         splines = splines_cell * (l * m * n)
@@ -1465,7 +1465,7 @@ class MeshLattice(Mesh):
         splines[:] = self.splines
         nb_patchs_cell = len(self.splines) // (self.l * self.m * self.n)
         connectivity_cell, splines_cell, full_to_cell = self.connectivity.subset(
-            splines, np.arange(nb_patchs_cell)
+            splines.tolist(), np.arange(nb_patchs_cell)
         )
         mesh_cell = Mesh(
             list(splines_cell),

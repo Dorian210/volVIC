@@ -5,10 +5,10 @@ Documentation for module volVIC.membrane_stiffness
 GLOBAL FUNCTIONS:
 ~~~~~~~~~~~~~~~~~~
   >>> make_coordinates_systems(
-    ctrl_pts: numpy.ndarray[numpy.floating],
+    ctrl_pts: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     dN_dxi: scipy.sparse._matrix.spmatrix,
     dN_deta: scipy.sparse._matrix.spmatrix
-) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]
       Compute the covariant basis vectors and transformation components between covariant and contravariant
       bases.
       
@@ -18,7 +18,7 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      ctrl_pts : np.ndarray[np.floating]
+      ctrl_pts : NDArray[np.floating]
           Array of control points in physical space, shaped as (`3`, `n_nodes_xi`, `n_nodes_eta`).
       dN_dxi : sps.spmatrix
           Sparse matrix of derivatives of basis functions with respect to the first isoparametric coordinate
@@ -29,13 +29,13 @@ GLOBAL FUNCTIONS:
       
       Returns
       -------
-      tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+      tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
           Tuple containing:
-          - `A1` (`np.ndarray[np.floating]`): Covariant basis vector 1 at each evaluation point.
-          - `A2` (`np.ndarray[np.floating]`): Covariant basis vector 2 at each evaluation point.
-          - `A11` (`np.ndarray[np.floating]`): First component of the covariant-to-contravariant transformation.
-          - `A22` (`np.ndarray[np.floating]`): Second component of the covariant-to-contravariant transformation.
-          - `A12` (`np.ndarray[np.floating]`): Third component of the covariant-to-contravariant transformation.
+          - `A1` (`NDArray[np.floating]`): Covariant basis vector 1 at each evaluation point.
+          - `A2` (`NDArray[np.floating]`): Covariant basis vector 2 at each evaluation point.
+          - `A11` (`NDArray[np.floating]`): First component of the covariant-to-contravariant transformation.
+          - `A22` (`NDArray[np.floating]`): Second component of the covariant-to-contravariant transformation.
+          - `A12` (`NDArray[np.floating]`): Third component of the covariant-to-contravariant transformation.
       
       Notes
       -----
@@ -44,20 +44,20 @@ GLOBAL FUNCTIONS:
       points.
 
   >>> make_H(
-    A11: numpy.ndarray[numpy.floating],
-    A22: numpy.ndarray[numpy.floating],
-    A12: numpy.ndarray[numpy.floating]
+    A11: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
+    A22: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
+    A12: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
 ) -> scipy.sparse._matrix.spmatrix
       Assemble Hooke's tensor in contravariant basis Voigt notation for a membrane material with Poisson's ratio
       set to 0 and Young's modulus set to 1, using B-spline basis components.
       
       Parameters
       ----------
-      A11 : np.ndarray[np.floating]
+      A11 : NDArray[np.floating]
           Covariant-to-contravariant basis component array for the (1,1) direction in isoparametric space.
-      A22 : np.ndarray[np.floating]
+      A22 : NDArray[np.floating]
           Covariant-to-contravariant basis component array for the (2,2) direction in isoparametric space.
-      A12 : np.ndarray[np.floating]
+      A12 : NDArray[np.floating]
           Covariant-to-contravariant basis component array for the (1,2) direction in isoparametric space.
       
       Returns
@@ -75,8 +75,8 @@ GLOBAL FUNCTIONS:
   >>> make_Bm(
     dN_dxi: scipy.sparse._matrix.spmatrix,
     dN_deta: scipy.sparse._matrix.spmatrix,
-    A1: numpy.ndarray[numpy.floating],
-    A2: numpy.ndarray[numpy.floating]
+    A1: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
+    A2: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
 ) -> scipy.sparse._matrix.spmatrix
       Assemble the Jacobian matrix `Bm` for membrane deformation in Voight notation in isogeometric analysis.
       
@@ -93,9 +93,9 @@ GLOBAL FUNCTIONS:
       dN_deta : sps.spmatrix
           Sparse matrix of derivatives of the shape functions with respect to the `eta` coordinate in
           isoparametric space. Shape: (`n_gauss`, `n_nodes`).
-      A1 : np.ndarray[np.floating]
+      A1 : NDArray[np.floating]
           Covariant tangent vector in the `xi` direction. Shape: (`3`, `n_gauss`).
-      A2 : np.ndarray[np.floating]
+      A2 : NDArray[np.floating]
           Covariant tangent vector in the `eta` direction. Shape: (`3`, `n_gauss`).
       
       Returns
@@ -111,7 +111,7 @@ GLOBAL FUNCTIONS:
 
   >>> make_membrane_stiffness_operator(
     spline: bsplyne.b_spline.BSpline,
-    ctrl_pts: numpy.ndarray[numpy.floating]
+    ctrl_pts: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
 ) -> scipy.sparse._matrix.spmatrix
       Assemble the global membrane stiffness matrix for a B-spline surface patch.
       
@@ -123,7 +123,7 @@ GLOBAL FUNCTIONS:
       ----------
       spline : BSpline
           B-spline surface patch object defining the geometry and basis functions.
-      ctrl_pts : np.ndarray[np.floating]
+      ctrl_pts : NDArray[np.floating]
           Array of control points defining the physical geometry of the surface.
           Shape should be (`3`, `n_nodes_xi`, `n_nodes_eta`).
       

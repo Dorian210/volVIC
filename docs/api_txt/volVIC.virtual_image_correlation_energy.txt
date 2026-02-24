@@ -17,32 +17,32 @@ Attributes
 ----------
 spline : BSpline
     The `BSpline` surface object defining the isoparametric space and mapping.
-ctrl_pts : np.ndarray[np.floating]
+ctrl_pts : NDArray[np.floating]
     The control points of the `BSpline` surface, as a `numpy` array of shape (3, N_xi, N_eta).
-virtual_image : Callable[[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], float], tuple[np.ndarray[np.floating], np.ndarray[np.floating]]]
+virtual_image : Callable[[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], float], tuple[NDArray[np.floating], NDArray[np.floating]]]
     Function to compute the virtual image and its derivative with respect to `rho`.
 h : float
     Half width of the normal neighborhood.
-xi : np.ndarray[np.floating]
+xi : NDArray[np.floating]
     Integration points in the `xi` isoparametric direction.
-dxi : np.ndarray[np.floating]
+dxi : NDArray[np.floating]
     Weights of the integration points in the `xi` isoparametric direction.
-eta : np.ndarray[np.floating]
+eta : NDArray[np.floating]
     Integration points in the `eta` isoparametric direction.
-deta : np.ndarray[np.floating]
+deta : NDArray[np.floating]
     Weights of the integration points in the `eta` isoparametric direction.
-gamma : np.ndarray[np.floating]
+gamma : NDArray[np.floating]
     Integration points along the normal direction of the B-spline.
-dgamma : np.ndarray[np.floating]
+dgamma : NDArray[np.floating]
     Weights of the integration points along the normal direction.
-Xv0 : np.ndarray[np.floating]
+Xv0 : NDArray[np.floating]
     Flattened coordinates of the reference points in the normal neighborhood.
 Uv_p : sps.spmatrix
     Sparse linear operator mapping control point displacements to displacements of points in
     the normal neighborhood.
-wdetJs : np.ndarray[np.floating]
+wdetJs : NDArray[np.floating]
     xi and eta quadrature weights scaled by the surface Jacobian determinant.
-wdetJ : np.ndarray[np.floating]
+wdetJ : NDArray[np.floating]
     xi, eta and gamma quadrature weights scaled by the surface Jacobian determinant.
 
 Notes
@@ -58,12 +58,12 @@ the VIC energy and its derivatives.
   >>> __init__(
     self,
     spline: bsplyne.b_spline.BSpline,
-    ctrl_pts: numpy.ndarray[numpy.floating],
+    ctrl_pts: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     surf_dx: float,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]],
     width_dx: float,
     h: float,
-    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>
+    virtual_image: Callable[[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], float], tuple[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]]]] = <function g_slide>
 )
       Initialize a `VirtualImageCorrelationEnergyElem` object for VIC energy computation over a
       B-spline surface.
@@ -76,7 +76,7 @@ the VIC energy and its derivatives.
       ----------
       spline : BSpline
           The `BSpline` surface object defining the isoparametric space and mapping.
-      ctrl_pts : np.ndarray[np.floating]
+      ctrl_pts : NDArray[np.floating]
           The control points of the `BSpline` surface, as a `numpy` array of shape
           (3, N_xi, N_eta).
       surf_dx : float
@@ -90,7 +90,7 @@ the VIC energy and its derivatives.
           Target mapped distance between integration points along the normal direction.
       h : float
           Half-width of the neighborhood along the normal direction.
-      virtual_image : Callable[[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], float], tuple[np.ndarray[np.floating], np.ndarray[np.floating]]], optional
+      virtual_image : Callable[[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], float], tuple[NDArray[np.floating], NDArray[np.floating]]], optional
           Function to compute the virtual image and its derivative with respect to `rho`.
           By default, `g_slide_g_prime`.
       
@@ -101,7 +101,10 @@ the VIC energy and its derivatives.
       - The `virtual_image` function must return a tuple (`g`, `g_prime`), where `g` is the
       virtual image and `g_prime` its derivative with respect to `rho`.
 
-  >>> rigid_body_copy(self, new_ctrl_pts: numpy.ndarray[numpy.floating])
+  >>> rigid_body_copy(
+    self,
+    new_ctrl_pts: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
+)
 
   >>> make_intg_space(
     self,
@@ -110,7 +113,7 @@ the VIC energy and its derivatives.
     width_dx: float,
     h: float,
     eps: float = 1e-06
-) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+) -> tuple[tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]], tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]]
       Generate integration points and weights in the parametric space and along the normal direction for VIC computation.
       
       This method returns arrays of integration points and their corresponding weights in the parametric directions (`xi`, `eta`)
@@ -137,9 +140,9 @@ the VIC energy and its derivatives.
       
       Returns
       -------
-      (xi, eta, gamma) : tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+      (xi, eta, gamma) : tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
           Integration points in the parametric directions and along the normal direction.
-      (dxi, deta, dgamma) : tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+      (dxi, deta, dgamma) : tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
           Integration weights corresponding to the points in `xi`, `eta`, and `gamma`.
       
       Notes
@@ -150,7 +153,7 @@ the VIC energy and its derivatives.
 
   >>> make_operators(
     self
-) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], scipy.sparse._matrix.spmatrix, numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]
       Construct a linearized displacement operator and compute the initial position
       of a set of points in a normal neighborhood of the B-spline surface.
       
@@ -177,7 +180,7 @@ the VIC energy and its derivatives.
       
       Returns
       -------
-      Xv0 : np.ndarray[np.floating]
+      Xv0 : NDArray[np.floating]
           Flattened coordinates of the points in the reference configuration,
           located along the normal at a signed distance γ from the surface.
           Flattened array of shape (3 * n_points,)
@@ -185,32 +188,32 @@ the VIC energy and its derivatives.
           Sparse linear operator that maps displacements at control points
           to displacements of the corresponding points in the normal neighborhood.
           Sparse matrix of shape (3 * n_points, 3 * n_ctrl_pts).
-      wdetJs : np.ndarray[np.floating]
+      wdetJs : NDArray[np.floating]
           xi and eta quadrature weights scaled by the surface Jacobian determinant.
           Array of shape (n_surf_points,)
-      wdetJ : np.ndarray[np.floating]
+      wdetJ : NDArray[np.floating]
           xi, eta and gamma quadrature weights scaled by the surface Jacobian determinant.
           Array of shape (n_points,)
 
   >>> f_df_dX(
     self,
-    X: numpy.ndarray[numpy.floating],
-    image: numpy.ndarray
-) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix]
+    X: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
+    image: numpy.ndarray[typing.Any, numpy.dtype[+_ScalarType_co]]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], scipy.sparse._matrix.spmatrix]
       Interpolate the grey level values of a voxel-based `image` at specified coordinates `X` and compute the derivative
       of the interpolation with respect to `X`.
       
       Parameters
       ----------
-      X : np.ndarray[np.floating]
+      X : NDArray[np.floating]
           Coordinates of the evaluation points as continuous pixel indices, flattened as
           `[x_0, ..., x_n, y_0, ..., y_n, z_0, ..., z_n]`.
-      image : np.ndarray
+      image : NDArray
           Voxel-based image (volume) in which the transition area is searched.
       
       Returns
       -------
-      f : np.ndarray[np.floating]
+      f : NDArray[np.floating]
           Array of grey levels of the `image` interpolated at the coordinates specified by `X`.
       df_dX : sps.spmatrix
           Sparse matrix representing the derivative of the grey level interpolation with respect to
@@ -225,7 +228,7 @@ the VIC energy and its derivatives.
   >>> g_dg_drho(
     self,
     rho: float
-) -> tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]
       Evaluate the virtual image and its derivative with respect to `rho` at the
       integration points in the isoparametric space and along the normal direction.
       
@@ -250,24 +253,24 @@ the VIC energy and its derivatives.
 
   >>> r_dr_dg_dr_df(
     self,
-    g: numpy.ndarray[numpy.floating],
-    f: numpy.ndarray[numpy.floating]
-) -> tuple[numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, scipy.sparse._matrix.spmatrix]
+    g: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
+    f: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], scipy.sparse._matrix.spmatrix, scipy.sparse._matrix.spmatrix]
       Compute the residual of the VIC problem and its derivatives with respect to the virtual image and
       the image at the integration points in the isoparametric space and along the normal direction.
       
       Parameters
       ----------
-      g : np.ndarray[np.floating]
+      g : NDArray[np.floating]
           Virtual image evaluated at the integration points (in the isoparametric space and along the
           normal direction).
-      f : np.ndarray[np.floating]
+      f : NDArray[np.floating]
           Image evaluated at the integration points (in the isoparametric space and along the normal
           direction).
       
       Returns
       -------
-      r : np.ndarray[np.floating]
+      r : NDArray[np.floating]
           Residual of the VIC problem, i.e., `g - f`, flattened as a 1D array.
       dr_dg : sps.spmatrix
           Sparse identity matrix representing the derivative of the residual with respect to the virtual
@@ -283,10 +286,10 @@ the VIC energy and its derivatives.
 
   >>> E_dE_du_d2E_du2_dE_drho_d2E_drho2(
     self,
-    u: numpy.ndarray[numpy.floating],
+    u: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     rho: float,
-    image: numpy.ndarray
-) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+    image: numpy.ndarray[typing.Any, numpy.dtype[+_ScalarType_co]]
+) -> tuple[float, numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], scipy.sparse._matrix.spmatrix, float, float]
       Compute the VIC energy, its gradient, and Hessian with respect to the B-spline control point displacements (`u`)
       and the virtual image parameter (`rho`).
       
@@ -296,19 +299,19 @@ the VIC energy and its derivatives.
       
       Parameters
       ----------
-      u : np.ndarray[np.floating]
+      u : NDArray[np.floating]
           Displacements of the B-spline control points in the isoparametric space.
           Should be a 1D array of length `3 * n_ctrl_pts`.
       rho : float
           Virtual image parameter.
-      image : np.ndarray
+      image : NDArray
           Voxel-based image (volume) on which the surface fitting is performed.
       
       Returns
       -------
       E : float
           Value of the VIC energy for the current parameters.
-      dE_du : np.ndarray[np.floating]
+      dE_du : NDArray[np.floating]
           Gradient of the energy with respect to the control point displacements (`u`).
           1D array of length `3 * n_ctrl_pts`.
       d2E_du2 : sps.spmatrix
@@ -337,7 +340,7 @@ GLOBAL FUNCTIONS:
     width_dx: float = 0.5,
     surf_dx: float = 1,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
-    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
+    virtual_image: Callable[[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], float], tuple[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]]]] = <function g_slide>,
     verbose: bool = True,
     disable_parallel: bool = False
 ) -> list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
@@ -411,7 +414,7 @@ GLOBAL FUNCTIONS:
       - Intended for use in surface-based Virtual Image Correlation workflows.
 
   >>> plot_last_profile(
-    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
+    image_energies: Sequence[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem]
 )
       Plot mean graylevel profiles and inter-/intra-patch standard deviations
       along the normal direction of the surface.
@@ -434,7 +437,7 @@ GLOBAL FUNCTIONS:
       Parameters
       ----------
       image_energies : list of VirtualImageCorrelationEnergyElem
-          List of initialized VIC energy elements containing saved quantities
+          Sequence of initialized VIC energy elements containing saved quantities
           from the last image correlation evaluation. Each element must provide
           the following attributes:
           - ``gamma`` : 1D array of normal coordinates,
@@ -450,14 +453,14 @@ GLOBAL FUNCTIONS:
       - ``r`` denotes the graylevel residual.
 
   >>> compute_image_energy_operators(
-    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    image_energies: Sequence[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
     mesh: volVIC.Mesh.Mesh,
-    image: numpy.ndarray,
-    u_field: numpy.ndarray[numpy.floating],
+    image: numpy.ndarray[typing.Any, numpy.dtype[+_ScalarType_co]],
+    u_field: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     rho: float,
     verbose: bool = True,
     disable_parallel: bool = False
-) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+) -> tuple[float, numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], scipy.sparse._matrix.spmatrix, float, float]
       Evaluate image energy and assemble first- and second-order operators
       for a multipatch B-spline mesh.
       
@@ -477,18 +480,18 @@ GLOBAL FUNCTIONS:
       Parameters
       ----------
       image_energies : list of VirtualImageCorrelationEnergyElem
-          List of initialized VIC energy elements, one per patch.
+          Sequence of initialized VIC energy elements, one per patch.
       
       mesh : Mesh
           Multipatch B-spline mesh used to assemble global operators.
       
-      image : np.ndarray
+      image : NDArray
           3D graylevel-based image containing the features to be fitted.
           The Virtual Image Correlation (VIC) energy defines a cost function
           that quantifies how well the deformed mesh matches these image
           features.
       
-      u_field : np.ndarray[np.floating]
+      u_field : NDArray[np.floating]
           Global displacement field defined at the unique control points of
           the mesh. It is internally expanded to patch-wise (separated)
           representations.
@@ -509,7 +512,7 @@ GLOBAL FUNCTIONS:
       E : float
           Total image energy summed over all patches.
       
-      grad : np.ndarray[np.floating]
+      grad : NDArray[np.floating]
           Assembled global gradient of the image energy with respect to the
           displacement field.
       
@@ -532,16 +535,16 @@ GLOBAL FUNCTIONS:
 
   >>> compute_distance_field_patch(
     image_energy,
-    f: numpy.ndarray[numpy.floating],
+    f: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     rho: float,
     max_iter: int = 20
-) -> numpy.ndarray[numpy.floating]
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
       Calculate the distance between the target profile and the real profiles
       in the image using Gauss-Newton optimization method.
       
       Parameters
       ----------
-      f : np.ndarray[np.floating]
+      f : NDArray[np.floating]
           Real image profiles to compare with the target profile.
       rho : float
           Parameter of the virtual image.
@@ -552,15 +555,15 @@ GLOBAL FUNCTIONS:
       
       Returns
       -------
-      d : np.ndarray[np.floating]
+      d : NDArray[np.floating]
           Displacement field representing the difference between real and target profiles.
 
   >>> compute_distance_field(
-    image_energies: list[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
-    saved_data: list[dict[str, numpy.ndarray[numpy.floating]]] = None,
+    image_energies: Sequence[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    saved_data: Optional[list[dict[str, Union[numpy.ndarray[Any, numpy.dtype[numpy.floating]], float]]]] = None,
     verbose: bool = True,
     disable_parallel: bool = False
-) -> list[numpy.ndarray[numpy.floating]]
+) -> list[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]
       Compute the distance field between real image profiles and target virtual
       profiles for a set of VIC energy elements.
       
@@ -573,7 +576,7 @@ GLOBAL FUNCTIONS:
       Parameters
       ----------
       image_energies : list of VirtualImageCorrelationEnergyElem
-          List of VIC energy elements, one per patch.
+          Sequence of VIC energy elements, one per patch.
       saved_data : list of dict, optional
           List of dictionaries containing the saved image profiles for each
           patch. Expected keys include `'last_saved_f'` and `'last_saved_rho'`.
@@ -590,7 +593,7 @@ GLOBAL FUNCTIONS:
       
       Returns
       -------
-      distances : list of np.ndarray
+      distances : list of NDArray
           List of per-patch displacement fields representing the distance
           between real and target profiles along the normal direction.
       

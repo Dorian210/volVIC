@@ -1,6 +1,7 @@
 # %%
 from typing import Union
 import numpy as np
+from numpy.typing import NDArray
 import numba as nb
 from bsplyne import BSpline
 from bsplyne.b_spline_basis import _DN
@@ -306,12 +307,12 @@ def linspace_for_VIC_elem_numba(
 
 def linspace_for_VIC_elem(
     spline: BSpline,
-    ctrl_pts: np.ndarray[np.floating],
+    ctrl_pts: NDArray[np.floating],
     dist: float = 1.0,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
 ) -> tuple[
-    tuple[np.ndarray[np.floating], np.ndarray[np.floating]],
-    tuple[np.ndarray[np.floating], np.ndarray[np.floating]],
+    tuple[NDArray[np.floating], NDArray[np.floating]],
+    tuple[NDArray[np.floating], NDArray[np.floating]],
 ]:
     """
     Compute integration points and weights in the parametric space of a `BSpline`
@@ -330,7 +331,7 @@ def linspace_for_VIC_elem(
     spline : BSpline
         The `BSpline` surface object defining the parametric space and mapping.
 
-    ctrl_pts : np.ndarray[np.floating]
+    ctrl_pts : NDArray[np.floating]
         The control points of the `BSpline` surface, as a `numpy` array of shape
         `(3, N_xi, N_eta)`.
 
@@ -350,11 +351,11 @@ def linspace_for_VIC_elem(
 
     Returns
     -------
-    (xi, eta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+    (xi, eta) : tuple[NDArray[np.floating], NDArray[np.floating]]
         Tuple of `numpy` arrays containing the integration points in the `xi` and
         `eta` isoparametric directions.
 
-    (dxi, deta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+    (dxi, deta) : tuple[NDArray[np.floating], NDArray[np.floating]]
         Tuple of `numpy` arrays containing the integration weights (step sizes) in
         the `xi` and `eta` directions.
 
@@ -370,9 +371,9 @@ def linspace_for_VIC_elem(
     ((`xi` points, `eta` points), (`xi` weights, `eta` weights)).
     """
     if np.isscalar(alpha):
-        alpha = ((alpha, alpha), (alpha, alpha))  # type: ignore
+        alpha_tuple = ((alpha, alpha), (alpha, alpha))
     else:
-        alpha = ((alpha[0][0], alpha[0][1]), (alpha[1][0], alpha[1][1]))
+        alpha_tuple = ((alpha[0][0], alpha[0][1]), (alpha[1][0], alpha[1][1]))  # type: ignore
 
     ctrl_pts = ctrl_pts.reshape((3, -1))
     p_xi, p_eta = spline.getDegrees()
@@ -380,7 +381,7 @@ def linspace_for_VIC_elem(
     span_xi, span_eta = spline.getSpans()
 
     (xi, eta), (dxi, deta) = linspace_for_VIC_elem_numba(
-        alpha, p_xi, p_eta, knot_xi, knot_eta, span_xi, span_eta, ctrl_pts, dist
+        alpha_tuple, p_xi, p_eta, knot_xi, knot_eta, span_xi, span_eta, ctrl_pts, dist
     )
     return (xi, eta), (dxi, deta)
 

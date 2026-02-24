@@ -1,24 +1,25 @@
 import numpy as np
+from numpy.typing import NDArray
 
 
 def g_slide(
-    xi: np.ndarray[np.floating],
-    eta: np.ndarray[np.floating],
-    gamma: np.ndarray[np.floating],
+    xi: NDArray[np.floating],
+    eta: NDArray[np.floating],
+    gamma: NDArray[np.floating],
     rho: float,
     bg: float = 0.0,
     fg: float = 1.0,
-) -> tuple[np.ndarray[np.floating], np.ndarray[np.floating]]:
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Calculate the virtual image function and its derivative with respect to `rho`.
 
     Parameters
     ----------
-    xi : np.ndarray[np.floating]
+    xi : NDArray[np.floating]
         Array representing the xi coordinate.
-    eta : np.ndarray[np.floating]
+    eta : NDArray[np.floating]
         Array representing the eta coordinate.
-    gamma : np.ndarray[np.floating]
+    gamma : NDArray[np.floating]
         Array representing the gamma coordinate.
     rho : float
         Half width of transition from `bg` to `fg` graylevel.
@@ -29,9 +30,9 @@ def g_slide(
 
     Returns
     -------
-    g : np.ndarray[np.floating]
+    g : NDArray[np.floating]
         Virtual image function evaluation.
-    g_prime : np.ndarray[np.floating]
+    g_prime : NDArray[np.floating]
         Derivative of the virtual image function with respect to `rho`.
     """
     g = np.zeros((xi.size, eta.size, gamma.size), dtype=gamma.dtype)

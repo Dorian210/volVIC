@@ -5,8 +5,8 @@ Documentation for module volVIC.C1_triplets
 GLOBAL FUNCTIONS:
 ~~~~~~~~~~~~~~~~~~
   >>> recover_nodes_couples_from_unique_inds(
-    unique_nodes_inds: numpy.ndarray[numpy.integer]
-) -> numpy.ndarray[numpy.integer]
+    unique_nodes_inds: numpy.ndarray[typing.Any, numpy.dtype[numpy.integer]]
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.integer]]
       Recover all unordered pairs of node indices sharing the same unique node ID.
       
       This function is intended for multipatch B-spline lattices, where multiple
@@ -16,12 +16,12 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      unique_nodes_inds : np.ndarray of int
+      unique_nodes_inds : NDArray of int
           Array of length `n_nodes` mapping each mesh node to its unique node ID.
       
       Returns
       -------
-      np.ndarray of int, shape (n_couples, 2)
+      NDArray of int, shape (n_couples, 2)
           Array of node index pairs `(i, j)` with `i < j`, for all nodes sharing the
           same unique node ID.
       
@@ -31,9 +31,9 @@ GLOBAL FUNCTIONS:
       - Each unique unordered pair is returned exactly once.
 
   >>> get_all_triplets(
-    unique_nodes_inds: numpy.ndarray[numpy.integer],
-    shape_by_patch: numpy.ndarray[numpy.integer]
-) -> numpy.ndarray[numpy.integer]
+    unique_nodes_inds: numpy.ndarray[typing.Any, numpy.dtype[numpy.integer]],
+    shape_by_patch: numpy.ndarray[typing.Any, numpy.dtype[numpy.integer]]
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.integer]]
       Compute triplets of nodes `(A, B, C)` for C1 continuity constraints.
       
       For lattice or multipatch meshes, each triplet corresponds to three nodes
@@ -42,14 +42,14 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      unique_nodes_inds : np.ndarray of int
+      unique_nodes_inds : NDArray of int
           Array mapping each mesh node to its unique node ID.
-      shape_by_patch : np.ndarray of int, shape (n_patches, 2)
+      shape_by_patch : NDArray of int, shape (n_patches, 2)
           Number of nodes along each parametric direction per patch.
       
       Returns
       -------
-      np.ndarray of int, shape (3, n_triplets)
+      NDArray of int, shape (3, n_triplets)
           Array of triplets of unique node indices. Each column corresponds to
           a triplet (A, B, C) forming a candidate C1 continuity constraint.
       
@@ -60,7 +60,7 @@ GLOBAL FUNCTIONS:
 
   >>> make_C1_eqs(
     mesh: volVIC.Mesh.Mesh,
-    C1_inds: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
+    C1_inds: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[Any, numpy.dtype[numpy.integer]]] = None,
     threshold: float = 0.1,
     field_size: int = 3,
     verbose: bool = True

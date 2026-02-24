@@ -1,5 +1,6 @@
 from typing import Union, Literal
 import numpy as np
+from numpy.typing import NDArray
 import numba as nb
 import scipy.sparse as sps
 from volVIC.Mesh import Mesh
@@ -7,8 +8,8 @@ from volVIC.Mesh import Mesh
 
 @nb.njit(cache=True)
 def recover_nodes_couples_from_unique_inds(
-    unique_nodes_inds: np.ndarray[np.integer],
-) -> np.ndarray[np.integer]:
+    unique_nodes_inds: NDArray[np.integer],
+) -> NDArray[np.integer]:
     """
     Recover all unordered pairs of node indices sharing the same unique node ID.
 
@@ -19,12 +20,12 @@ def recover_nodes_couples_from_unique_inds(
 
     Parameters
     ----------
-    unique_nodes_inds : np.ndarray of int
+    unique_nodes_inds : NDArray of int
         Array of length `n_nodes` mapping each mesh node to its unique node ID.
 
     Returns
     -------
-    np.ndarray of int, shape (n_couples, 2)
+    NDArray of int, shape (n_couples, 2)
         Array of node index pairs `(i, j)` with `i < j`, for all nodes sharing the
         same unique node ID.
 
@@ -73,8 +74,8 @@ def recover_nodes_couples_from_unique_inds(
 
 
 def get_all_triplets(
-    unique_nodes_inds: np.ndarray[np.integer], shape_by_patch: np.ndarray[np.integer]
-) -> np.ndarray[np.integer]:
+    unique_nodes_inds: NDArray[np.integer], shape_by_patch: NDArray[np.integer]
+) -> NDArray[np.integer]:
     """
     Compute triplets of nodes `(A, B, C)` for C1 continuity constraints.
 
@@ -84,14 +85,14 @@ def get_all_triplets(
 
     Parameters
     ----------
-    unique_nodes_inds : np.ndarray of int
+    unique_nodes_inds : NDArray of int
         Array mapping each mesh node to its unique node ID.
-    shape_by_patch : np.ndarray of int, shape (n_patches, 2)
+    shape_by_patch : NDArray of int, shape (n_patches, 2)
         Number of nodes along each parametric direction per patch.
 
     Returns
     -------
-    np.ndarray of int, shape (3, n_triplets)
+    NDArray of int, shape (3, n_triplets)
         Array of triplets of unique node indices. Each column corresponds to
         a triplet (A, B, C) forming a candidate C1 continuity constraint.
 
@@ -186,7 +187,7 @@ def get_all_triplets(
 
 def make_C1_eqs(
     mesh: Mesh,
-    C1_inds: Union[None, Literal["auto", "none", "all"], np.ndarray[np.integer]] = None,
+    C1_inds: Union[None, Literal["auto", "none", "all"], NDArray[np.integer]] = None,
     threshold: float = 1e-1,  # 10%
     field_size: int = 3,
     verbose: bool = True,
@@ -312,6 +313,7 @@ def make_C1_eqs(
                     f"(threshold={threshold:.2g})"
                 )
     elif mode == "manual":
+        assert isinstance(C1_inds, np.ndarray)
         if C1_inds.ndim == 1:
             ABC = get_all_triplets(
                 mesh.connectivity.unique_nodes_inds, mesh.connectivity.shape_by_patch
@@ -352,11 +354,11 @@ def make_C1_eqs(
     )
     eqs = sps.block_diag([eqs] * field_size)
 
-    return eqs
+    return eqs  # type: ignore
 
 
 # def make_dirichlet_eqs(
-#     mesh: Mesh, unique_inds: np.ndarray[np.integer], field_size: int = 3
+#     mesh: Mesh, unique_inds: NDArray[np.integer], field_size: int = 3
 # ) -> sps.spmatrix:
 
 #     m = unique_inds.size

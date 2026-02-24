@@ -5,17 +5,17 @@ Documentation for module volVIC.solve
 GLOBAL FUNCTIONS:
 ~~~~~~~~~~~~~~~~~~
   >>> iteration(
-    u_field: numpy.ndarray[numpy.floating],
+    u_field: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     rho: float,
     mesh: volVIC.Mesh.Mesh,
-    image_energies: Iterable[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
-    image: numpy.ndarray,
+    image_energies: Sequence[volVIC.virtual_image_correlation_energy.VirtualImageCorrelationEnergyElem],
+    image: numpy.ndarray[typing.Any, numpy.dtype[+_ScalarType_co]],
     membrane_K: scipy.sparse._matrix.spmatrix,
     membrane_weight: float,
     C: scipy.sparse._matrix.spmatrix,
     verbose: bool = True,
     disable_parallel: bool = False
-)
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], float]
       Perform one iteration of the Virtual Image Correlation (VIC) energy minimization algorithm.
       
       This function updates the displacement field and the virtual image parameter by solving
@@ -25,15 +25,15 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      u_field : np.ndarray[np.floating]
+      u_field : NDArray[np.floating]
           Current displacement field defined at the mesh control points.
       rho : float
           Current virtual image parameter controlling the gray-level transformation.
       mesh : Mesh
           Geometric mesh to be deformed during the optimization.
-      image_energies : Iterable[VirtualImageCorrelationEnergyElem]
+      image_energies : Sequence[VirtualImageCorrelationEnergyElem]
           Collection of patchwise virtual image correlation energy elements.
-      image : np.ndarray
+      image : NDArray
           Real image (experimental or reference) to which the virtual image is fitted.
       membrane_K : scipy.sparse.spmatrix
           Sparse matrix representing the intrapatch membrane stiffness operator.
@@ -48,7 +48,7 @@ GLOBAL FUNCTIONS:
       
       Returns
       -------
-      du_field : np.ndarray
+      du_field : NDArray[np.floating]
           Increment of the displacement field obtained from the linearized system.
       drho : float
           Increment of the virtual image parameter corresponding to intensity adaptation.

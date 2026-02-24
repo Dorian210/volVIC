@@ -1,5 +1,6 @@
 from typing import Iterable
 import numpy as np
+from numpy.typing import NDArray
 import scipy.sparse as sps
 
 # from scipy.stats import chi2
@@ -11,13 +12,13 @@ from volVIC.virtual_image_correlation_energy import VirtualImageCorrelationEnerg
 
 
 def make_coordinates_systems(
-    ctrl_pts: np.ndarray[np.floating], dN_dxi: sps.spmatrix, dN_deta: sps.spmatrix
+    ctrl_pts: NDArray[np.floating], dN_dxi: sps.spmatrix, dN_deta: sps.spmatrix
 ) -> tuple[
-    np.ndarray[np.floating],
-    np.ndarray[np.floating],
-    np.ndarray[np.floating],
-    np.ndarray[np.floating],
-    np.ndarray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
 ]:
     """
     Compute the covariant basis vectors and transformation components between covariant and contravariant
@@ -29,7 +30,7 @@ def make_coordinates_systems(
 
     Parameters
     ----------
-    ctrl_pts : np.ndarray[np.floating]
+    ctrl_pts : NDArray[np.floating]
         Array of control points in physical space, shaped as (`3`, `n_nodes_xi`, `n_nodes_eta`).
     dN_dxi : sps.spmatrix
         Sparse matrix of derivatives of basis functions with respect to the first isoparametric coordinate
@@ -40,13 +41,13 @@ def make_coordinates_systems(
 
     Returns
     -------
-    tuple[np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating], np.ndarray[np.floating]]
+    tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
         Tuple containing:
-        - `A1` (`np.ndarray[np.floating]`): Covariant basis vector 1 at each evaluation point.
-        - `A2` (`np.ndarray[np.floating]`): Covariant basis vector 2 at each evaluation point.
-        - `A11` (`np.ndarray[np.floating]`): First component of the covariant-to-contravariant transformation.
-        - `A22` (`np.ndarray[np.floating]`): Second component of the covariant-to-contravariant transformation.
-        - `A12` (`np.ndarray[np.floating]`): Third component of the covariant-to-contravariant transformation.
+        - `A1` (`NDArray[np.floating]`): Covariant basis vector 1 at each evaluation point.
+        - `A2` (`NDArray[np.floating]`): Covariant basis vector 2 at each evaluation point.
+        - `A11` (`NDArray[np.floating]`): First component of the covariant-to-contravariant transformation.
+        - `A22` (`NDArray[np.floating]`): Second component of the covariant-to-contravariant transformation.
+        - `A12` (`NDArray[np.floating]`): Third component of the covariant-to-contravariant transformation.
 
     Notes
     -----
@@ -55,8 +56,8 @@ def make_coordinates_systems(
     points.
     """
     # Covariant coordinates system
-    A1 = ctrl_pts.reshape((3, -1)) @ dN_dxi.T
-    A2 = ctrl_pts.reshape((3, -1)) @ dN_deta.T
+    A1 = ctrl_pts.reshape((3, -1)) @ dN_dxi.T  # type: ignore
+    A2 = ctrl_pts.reshape((3, -1)) @ dN_deta.T  # type: ignore
     # Covariant to contravariant transformation
     A11cov = (A1 * A1).sum(axis=0)
     A22cov = (A2 * A2).sum(axis=0)
@@ -70,9 +71,9 @@ def make_coordinates_systems(
 
 
 def make_H(
-    A11: np.ndarray[np.floating],
-    A22: np.ndarray[np.floating],
-    A12: np.ndarray[np.floating],
+    A11: NDArray[np.floating],
+    A22: NDArray[np.floating],
+    A12: NDArray[np.floating],
 ) -> sps.spmatrix:
     """
     Assemble Hooke's tensor in contravariant basis Voigt notation for a membrane material with Poisson's ratio
@@ -80,11 +81,11 @@ def make_H(
 
     Parameters
     ----------
-    A11 : np.ndarray[np.floating]
+    A11 : NDArray[np.floating]
         Covariant-to-contravariant basis component array for the (1,1) direction in isoparametric space.
-    A22 : np.ndarray[np.floating]
+    A22 : NDArray[np.floating]
         Covariant-to-contravariant basis component array for the (2,2) direction in isoparametric space.
-    A12 : np.ndarray[np.floating]
+    A12 : NDArray[np.floating]
         Covariant-to-contravariant basis component array for the (1,2) direction in isoparametric space.
 
     Returns
@@ -106,14 +107,14 @@ def make_H(
     H13 = sps.diags(A11 * A12)
     H23 = sps.diags(A22 * A12)
     H = sps.bmat([[H11, H12, H13], [H12, H22, H23], [H13, H23, H33]])
-    return H
+    return H  # type: ignore
 
 
 def make_Bm(
     dN_dxi: sps.spmatrix,
     dN_deta: sps.spmatrix,
-    A1: np.ndarray[np.floating],
-    A2: np.ndarray[np.floating],
+    A1: NDArray[np.floating],
+    A2: NDArray[np.floating],
 ) -> sps.spmatrix:
     """
     Assemble the Jacobian matrix `Bm` for membrane deformation in Voight notation in isogeometric analysis.
@@ -131,9 +132,9 @@ def make_Bm(
     dN_deta : sps.spmatrix
         Sparse matrix of derivatives of the shape functions with respect to the `eta` coordinate in
         isoparametric space. Shape: (`n_gauss`, `n_nodes`).
-    A1 : np.ndarray[np.floating]
+    A1 : NDArray[np.floating]
         Covariant tangent vector in the `xi` direction. Shape: (`3`, `n_gauss`).
-    A2 : np.ndarray[np.floating]
+    A2 : NDArray[np.floating]
         Covariant tangent vector in the `eta` direction. Shape: (`3`, `n_gauss`).
 
     Returns
@@ -149,31 +150,31 @@ def make_Bm(
     """
     de_xi_du = sps.hstack(
         (
-            dN_dxi.multiply(A1[0, :, None]),
-            dN_dxi.multiply(A1[1, :, None]),
-            dN_dxi.multiply(A1[2, :, None]),
+            dN_dxi.multiply(A1[0, :, None]),  # type: ignore
+            dN_dxi.multiply(A1[1, :, None]),  # type: ignore
+            dN_dxi.multiply(A1[2, :, None]),  # type: ignore
         )
     )
     de_eta_du = sps.hstack(
         (
-            dN_deta.multiply(A2[0, :, None]),
-            dN_deta.multiply(A2[1, :, None]),
-            dN_deta.multiply(A2[2, :, None]),
+            dN_deta.multiply(A2[0, :, None]),  # type: ignore
+            dN_deta.multiply(A2[1, :, None]),  # type: ignore
+            dN_deta.multiply(A2[2, :, None]),  # type: ignore
         )
     )
     de_xi_eta_2_du = sps.hstack(
         (
-            dN_deta.multiply(A1[0, :, None]) + dN_dxi.multiply(A2[0, :, None]),
-            dN_deta.multiply(A1[1, :, None]) + dN_dxi.multiply(A2[1, :, None]),
-            dN_deta.multiply(A1[2, :, None]) + dN_dxi.multiply(A2[2, :, None]),
+            dN_deta.multiply(A1[0, :, None]) + dN_dxi.multiply(A2[0, :, None]),  # type: ignore
+            dN_deta.multiply(A1[1, :, None]) + dN_dxi.multiply(A2[1, :, None]),  # type: ignore
+            dN_deta.multiply(A1[2, :, None]) + dN_dxi.multiply(A2[2, :, None]),  # type: ignore
         )
     )
     Bm = sps.vstack((de_xi_du, de_eta_du, de_xi_eta_2_du))
-    return Bm
+    return Bm  # type: ignore
 
 
 def make_membrane_stiffness_operator(
-    spline: BSpline, ctrl_pts: np.ndarray[np.floating]
+    spline: BSpline, ctrl_pts: NDArray[np.floating]
 ) -> sps.spmatrix:
     """
     Assemble the global membrane stiffness matrix for a B-spline surface patch.
@@ -186,7 +187,7 @@ def make_membrane_stiffness_operator(
     ----------
     spline : BSpline
         B-spline surface patch object defining the geometry and basis functions.
-    ctrl_pts : np.ndarray[np.floating]
+    ctrl_pts : NDArray[np.floating]
         Array of control points defining the physical geometry of the surface.
         Shape should be (`3`, `n_nodes_xi`, `n_nodes_eta`).
 
@@ -216,7 +217,7 @@ def make_membrane_stiffness_operator(
     # Membrane strain tensor in the contravariant basis in Voigt notation
     Bm = make_Bm(dN_dxi, dN_deta, A1, A2)
     # Linear elasticity operator
-    K = (Bm.multiply(np.hstack([WdetJ] * 3)[:, None])).T @ H @ Bm
+    K = (Bm.multiply(np.hstack([WdetJ] * 3)[:, None])).T @ H @ Bm  # type: ignore
     return K
 
 
@@ -507,11 +508,11 @@ def make_membrane_weight(
     by discrete summation on each patch.
     """
     weights = mesh.separated_to_unique(
-        [s.DN(s.greville_abscissa()).diagonal() for s in mesh.splines]
+        [s.DN(s.greville_abscissa()).diagonal() for s in mesh.splines]  # type: ignore
     )
     weights = np.hstack([weights] * 3)
 
-    E_mem = expected_mean_dist**2 / 3 * np.dot(weights * weights, membrane_K.diagonal())
+    E_mem = expected_mean_dist**2 / 3 * np.dot(weights * weights, membrane_K.diagonal())  # type: ignore
 
     z = np.zeros(1)
     E_vic = 0

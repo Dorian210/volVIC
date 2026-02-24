@@ -18,16 +18,16 @@ Attributes
 mesh : Mesh
     Surface mesh used in the VIC problem.
 
-image : np.ndarray
+image : NDArray
     Image converted to floating-point format for computations.
 
 fg, bg : float
     Estimated or user-defined foreground and background gray levels.
 
-Rmat : np.ndarray
+Rmat : NDArray
     Rotation matrix resulting from ICP initialization.
 
-tvec : np.ndarray
+tvec : NDArray
     Translation vector resulting from ICP initialization.
 
 image_energies : list[VirtualImageCorrelationEnergyElem]
@@ -48,24 +48,24 @@ membrane_weight : float
 initial_rho : float
     Initial value of the distance scaling parameter.
 
-saved_data_0 : list[dict[str, np.ndarray]]
+saved_data_0 : list[dict[str, NDArray]]
     Cached image energy data from the first iteration, used for
     post-processing and visualization.
 
   >>> __init__(
     self,
     mesh: volVIC.Mesh.Mesh,
-    image: numpy.ndarray[numpy.uint16],
+    image: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint16]],
     ICP_init: bool = True,
     reversed_normals: bool = False,
     fg_bg: Optional[tuple[float, float]] = None,
     fg_bg_method: Literal['otsu', 'interp'] = 'otsu',
-    virtual_image: Callable[[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating], float], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]] = <function g_slide>,
+    virtual_image: Callable[[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]], float], tuple[numpy.ndarray[Any, numpy.dtype[numpy.floating]], numpy.ndarray[Any, numpy.dtype[numpy.floating]]]] = <function g_slide>,
     h: Optional[float] = None,
     width_dx: float = 0.5,
     surf_dx: float = 1.0,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0,
-    C1_mode: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[numpy.integer]] = None,
+    C1_mode: Union[NoneType, Literal['auto', 'none', 'all'], numpy.ndarray[Any, numpy.dtype[numpy.integer]]] = None,
     membrane_weight: Optional[float] = None,
     initial_rho: float = 5.0,
     expected_mean_dist: float = 5.0,
@@ -102,7 +102,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
           does not handle unit conversion or rescaling. ICP only corrects
           for rotation and translation, assuming consistent units.
       
-      image : np.ndarray[np.uint16]
+      image : NDArray[np.uint16]
           3D volumetric image (e.g. CT scan). The gray-level distribution is
           assumed to be bimodal (background / foreground).
       
@@ -156,7 +156,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
           where each value specifies the ignored distance at the corresponding boundary.
           By default, `0`.
       
-      C1_mode : {"auto", "none", "all"} or np.ndarray or None, optional
+      C1_mode : {"auto", "none", "all"} or NDArray or None, optional
           Definition of C¹ continuity constraints between patches:
               - `"auto"`: (default) automatically selected constraints (recommended)
               - `"none"`: no C¹ constraints
@@ -223,7 +223,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
     h: Optional[float] = None,
     disable_parallel: bool = False,
     verbose: bool = True
-)
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], float]
       Initialize the mesh placement and the normal search half-width `h`.
       
       This method optionally performs a rigid-body Iterative Closest Point (ICP)
@@ -265,11 +265,11 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Returns
       -------
-      Rmat : np.ndarray
+      Rmat : NDArray
           3x3 rotation matrix resulting from the ICP alignment.
           Identity if no ICP is performed.
       
-      tvec : np.ndarray
+      tvec : NDArray
           Translation vector resulting from the ICP alignment.
           Zero vector if no ICP is performed.
       
@@ -330,11 +330,11 @@ saved_data_0 : list[dict[str, np.ndarray]]
 
   >>> one_gauss_newton_iter(
     self,
-    u_field: numpy.ndarray[numpy.floating],
+    u_field: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     rho: float,
     verbose: bool = True,
     disable_parallel: bool = False
-) -> tuple[float, numpy.ndarray[numpy.floating], scipy.sparse._matrix.spmatrix, float, float]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], float]
       Perform a single Gauss-Newton iteration for the VIC problem.
       
       This method updates the displacement field and the transition distance
@@ -344,7 +344,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Parameters
       ----------
-      u_field : np.ndarray
+      u_field : NDArray[np.floating]
           Current displacement field of the mesh nodes, shape (3, N).
       
       rho : float
@@ -360,7 +360,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Returns
       -------
-      du_field : np.ndarray
+      du_field : NDArray[np.floating]
           Incremental displacement field computed during this iteration.
       
       drho : float
@@ -368,13 +368,13 @@ saved_data_0 : list[dict[str, np.ndarray]]
 
   >>> solve(
     self,
-    u_field: numpy.ndarray[numpy.floating] = None,
-    rho: float = None,
+    u_field: Optional[numpy.ndarray[Any, numpy.dtype[numpy.floating]]] = None,
+    rho: Optional[float] = None,
     eps: float = 0.05,
     max_iter: int = 20,
     verbose: bool = True,
     disable_parallel: bool = False
-) -> tuple[numpy.ndarray[numpy.floating], float]
+) -> tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], float]
       Solve the VIC problem using a Gauss-Newton optimization.
       
       This method iteratively updates the displacement field and the transition
@@ -391,7 +391,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Parameters
       ----------
-      u_field : np.ndarray, optional
+      u_field : NDArray[np.floating], optional
           Initial displacement field of shape (3, N). If `None` (default),
           initializes to zero.
       
@@ -416,7 +416,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Returns
       -------
-      u_field : np.ndarray
+      u_field : NDArray[np.floating]
           Final displacement field after convergence or reaching `max_iter`.
       
       rho : float
@@ -429,7 +429,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
 
   >>> save_paraview(
     self,
-    u_field: numpy.ndarray[numpy.floating],
+    u_field: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     folder: str,
     name: str,
     disable_parallel: bool = False,
@@ -451,7 +451,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Parameters
       ----------
-      u_field : np.ndarray
+      u_field : NDArray
           Displacement field of shape (3, N) to be saved.
       
       folder : str
@@ -476,7 +476,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
 
   >>> plot_results(
     self,
-    u_field: Optional[numpy.ndarray[numpy.floating]] = None,
+    u_field: Optional[numpy.ndarray[Any, numpy.dtype[numpy.floating]]] = None,
     disable_parallel: bool = False,
     verbose: bool = True,
     n_colors: int = 15,
@@ -504,7 +504,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Parameters
       ----------
-      u_field : np.ndarray or None, optional
+      u_field : NDArray or None, optional
           Displacement field to apply to the mesh for visualization. If `None`
           (default), the distances from the first iteration (`self.saved_data_0`)
           are displayed. If provided, the mesh is warped according to this
@@ -566,11 +566,11 @@ saved_data_0 : list[dict[str, np.ndarray]]
 
   >>> propagate_displacement_to_volume_mesh(
     self,
-    u_field: numpy.ndarray[numpy.floating],
+    u_field: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     volume_mesh: volVIC.Mesh.Mesh,
     voxel_size: float = 1.0,
     disable_parallel: bool = False
-) -> numpy.ndarray[numpy.floating]
+) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]
       Propagate a surface displacement field from voxel coordinates to a volumetric mesh
       in physical coordinates.
       
@@ -583,7 +583,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Parameters
       ----------
-      u_field : np.ndarray[np.floating]
+      u_field : NDArray[np.floating]
           Surface displacement field in voxel coordinates, typically obtained from
           :meth:`solve`.
       
@@ -600,7 +600,7 @@ saved_data_0 : list[dict[str, np.ndarray]]
       
       Returns
       -------
-      np.ndarray[np.floating]
+      NDArray[np.floating]
           Displacement field defined on the volume mesh nodes, in physical
           coordinates.
       

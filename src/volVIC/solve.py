@@ -1,5 +1,7 @@
+from collections.abc import Sequence
 from typing import Iterable
 import numpy as np
+from numpy.typing import NDArray
 import scipy.sparse as sps
 from volVIC.virtual_image_correlation_energy import (
     VirtualImageCorrelationEnergyElem,
@@ -11,17 +13,17 @@ from IGA_for_bsplyne import solve_sparse
 
 
 def iteration(
-    u_field: np.ndarray[np.floating],
+    u_field: NDArray[np.floating],
     rho: float,
     mesh: Mesh,
-    image_energies: Iterable[VirtualImageCorrelationEnergyElem],
-    image: np.ndarray,
+    image_energies: Sequence[VirtualImageCorrelationEnergyElem],
+    image: NDArray,
     membrane_K: sps.spmatrix,
     membrane_weight: float,
     C: sps.spmatrix,
     verbose: bool = True,
     disable_parallel: bool = False,
-):
+) -> tuple[NDArray[np.floating], float]:
     """
     Perform one iteration of the Virtual Image Correlation (VIC) energy minimization algorithm.
 
@@ -32,15 +34,15 @@ def iteration(
 
     Parameters
     ----------
-    u_field : np.ndarray[np.floating]
+    u_field : NDArray[np.floating]
         Current displacement field defined at the mesh control points.
     rho : float
         Current virtual image parameter controlling the gray-level transformation.
     mesh : Mesh
         Geometric mesh to be deformed during the optimization.
-    image_energies : Iterable[VirtualImageCorrelationEnergyElem]
+    image_energies : Sequence[VirtualImageCorrelationEnergyElem]
         Collection of patchwise virtual image correlation energy elements.
-    image : np.ndarray
+    image : NDArray
         Real image (experimental or reference) to which the virtual image is fitted.
     membrane_K : scipy.sparse.spmatrix
         Sparse matrix representing the intrapatch membrane stiffness operator.
@@ -55,7 +57,7 @@ def iteration(
 
     Returns
     -------
-    du_field : np.ndarray
+    du_field : NDArray[np.floating]
         Increment of the displacement field obtained from the linearized system.
     drho : float
         Increment of the virtual image parameter corresponding to intensity adaptation.
@@ -86,14 +88,14 @@ def iteration(
     u = u_field.ravel()
     if verbose:
         plot_last_profile(image_energies)
-        print(f"E_vic = {E:.3E}; E_mem = {0.5*(membrane_K@u)@u:.3E}")
-    grad_tot = C.T @ (grad + membrane_weight * membrane_K @ u)
-    if C.data.size / np.prod(C.shape) > 0.1:
-        H_tot = C.T.A @ (H + membrane_weight * membrane_K) @ C.A
+        print(f"E_vic = {E:.3E}; E_mem = {0.5*(membrane_K@u)@u:.3E}")  # type: ignore
+    grad_tot = C.T @ (grad + membrane_weight * membrane_K @ u)  # type: ignore
+    if C.data.size / np.prod(C.shape) > 0.1:  # type: ignore
+        H_tot = C.T.A @ (H + membrane_weight * membrane_K) @ C.A  # type: ignore
         dof = np.linalg.solve(H_tot, -grad_tot)
     else:
-        H_tot = C.T @ H @ C + membrane_weight * (C.T @ membrane_K @ C)
+        H_tot = C.T @ H @ C + membrane_weight * (C.T @ membrane_K @ C)  # type: ignore
         dof = solve_sparse(H_tot, -grad_tot)
-    du_field = (C @ dof).reshape(u_field.shape)
+    du_field = (C @ dof).reshape(u_field.shape)  # type: ignore
     drho = -dE_drho / d2E_drho2
     return du_field, drho

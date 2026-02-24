@@ -1,5 +1,6 @@
 from typing import Literal, Union
 import numpy as np
+from numpy.typing import NDArray
 import numba as nb
 import matplotlib.pyplot as plt
 
@@ -8,7 +9,7 @@ from scipy.signal import find_peaks
 
 
 @nb.njit
-def hist(img: np.ndarray[np.uint16]):
+def hist(img: NDArray[np.uint16]):
     """
     Compute the gray-level histogram of an unsigned integer image.
 
@@ -18,12 +19,12 @@ def hist(img: np.ndarray[np.uint16]):
 
     Parameters
     ----------
-    img : np.ndarray[np.uint16]
+    img : NDArray[np.uint16]
         Input grayscale image with unsigned integer values.
 
     Returns
     -------
-    histogram : np.ndarray[np.uint64]
+    histogram : NDArray[np.uint64]
         Histogram array where `histogram[g]` is the number of pixels
         with gray level `g`. Histogram array of size
         `np.iinfo(img.dtype).max + 1 = 65_536`.
@@ -41,7 +42,7 @@ def hist(img: np.ndarray[np.uint16]):
 
 
 @nb.njit
-def otsu_threshold(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
+def otsu_threshold(histogram: NDArray[np.uint64]) -> tuple[float, float]:
     """
     Estimate foreground and background gray levels using Otsu's method.
 
@@ -52,7 +53,7 @@ def otsu_threshold(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
 
     Parameters
     ----------
-    histogram : np.ndarray[np.uint64]
+    histogram : NDArray[np.uint64]
         Gray-level histogram of an image, where each entry represents
         the number of pixels at a given gray level.
 
@@ -95,7 +96,7 @@ def otsu_threshold(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
     return fg, bg
 
 
-def interp_fg_bg(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
+def interp_fg_bg(histogram: NDArray[np.uint64]) -> tuple[float, float]:
     """
     Estimate foreground and background gray levels by histogram interpolation.
 
@@ -114,7 +115,7 @@ def interp_fg_bg(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
 
     Parameters
     ----------
-    histogram : np.ndarray[np.uint64]
+    histogram : NDArray[np.uint64]
         Gray-level histogram of an image, where each entry represents the number
         of pixels at a given gray level.
 
@@ -197,7 +198,7 @@ def interp_fg_bg(histogram: np.ndarray[np.uint64]) -> tuple[float, float]:
 
 
 def find_fg_bg(
-    img: np.ndarray[np.uint16],
+    img: NDArray[np.uint16],
     method: Literal["otsu", "interp"] = "otsu",
     save_file: Union[str, None] = None,
     verbose: bool = True,
@@ -215,7 +216,7 @@ def find_fg_bg(
 
     Parameters
     ----------
-    img : np.ndarray[np.uint16]
+    img : NDArray[np.uint16]
         Input grayscale image with unsigned integer values (typically `uint16`).
     method : {"otsu", "interp"}, optional
         Method used to separate foreground and background gray levels:
@@ -304,7 +305,7 @@ def find_fg_bg(
     return float(fg_value), float(bg_value)
 
 
-def find_sigma_hat(image: np.ndarray[np.uint16], fg: float, bg: float) -> float:
+def find_sigma_hat(image: NDArray[np.uint16], fg: float, bg: float) -> float:
     """
     Estimate the standard deviation of noise in a CT image by analyzing voxels
     confidently assigned to a single phase.
@@ -319,8 +320,8 @@ def find_sigma_hat(image: np.ndarray[np.uint16], fg: float, bg: float) -> float:
 
     Parameters
     ----------
-    image : np.ndarray[np.uint16]
-        The input CT image as a `np.ndarray` of `np.uint16`, where voxel intensities
+    image : NDArray[np.uint16]
+        The input CT image as a `NDArray` of `np.uint16`, where voxel intensities
         represent X-ray absorption.
     fg : float
         The foreground gray level (nominal value for solid material).

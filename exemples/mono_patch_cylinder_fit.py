@@ -72,13 +72,13 @@ ctrl_pts = spline.orderElevation(ctrl_pts, [1, 2])
 ctrl_pts = spline.knotInsertion(ctrl_pts, [1, 10])
 
 # Multi-patch connectivity
-connectivity = MultiPatchBSplineConnectivity.from_separated_ctrlPts([ctrl_pts])
+connectivity = MultiPatchBSplineConnectivity.from_separated_ctrlPts([ctrl_pts])  # type: ignore
 
 # Map physical coordinates to voxel coordinates
-ctrl_pts = (ctrl_pts + 2) * size / 4
+ctrl_pts = (ctrl_pts + 2) * size / 4  # type: ignore
 
 # Build volVIC mesh
-spline_mesh = Mesh([spline], [ctrl_pts], connectivity)
+spline_mesh = Mesh([spline], [ctrl_pts], connectivity)  # type: ignore
 
 # Visual check: surface embedded in the image
 spline_mesh.plot_in_image(image, mode="voxels")

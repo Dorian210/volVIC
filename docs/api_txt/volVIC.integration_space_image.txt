@@ -63,10 +63,10 @@ GLOBAL FUNCTIONS:
 
   >>> linspace_for_VIC_elem(
     spline: bsplyne.b_spline.BSpline,
-    ctrl_pts: numpy.ndarray[numpy.floating],
+    ctrl_pts: numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]],
     dist: float = 1.0,
     alpha: Union[float, tuple[tuple[float, float], tuple[float, float]]] = 0.0
-) -> tuple[tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]], tuple[numpy.ndarray[numpy.floating], numpy.ndarray[numpy.floating]]]
+) -> tuple[tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]], tuple[numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]], numpy.ndarray[typing.Any, numpy.dtype[numpy.floating]]]]
       Compute integration points and weights in the parametric space of a `BSpline`
       surface, such that the mapped distance between points is close to `dist`.
       
@@ -83,7 +83,7 @@ GLOBAL FUNCTIONS:
       spline : BSpline
           The `BSpline` surface object defining the parametric space and mapping.
       
-      ctrl_pts : np.ndarray[np.floating]
+      ctrl_pts : NDArray[np.floating]
           The control points of the `BSpline` surface, as a `numpy` array of shape
           `(3, N_xi, N_eta)`.
       
@@ -103,11 +103,11 @@ GLOBAL FUNCTIONS:
       
       Returns
       -------
-      (xi, eta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+      (xi, eta) : tuple[NDArray[np.floating], NDArray[np.floating]]
           Tuple of `numpy` arrays containing the integration points in the `xi` and
           `eta` isoparametric directions.
       
-      (dxi, deta) : tuple[np.ndarray[np.floating], np.ndarray[np.floating]]
+      (dxi, deta) : tuple[NDArray[np.floating], NDArray[np.floating]]
           Tuple of `numpy` arrays containing the integration weights (step sizes) in
           the `xi` and `eta` directions.
       

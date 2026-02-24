@@ -4,7 +4,7 @@ Documentation for module volVIC.image_utils
 
 GLOBAL FUNCTIONS:
 ~~~~~~~~~~~~~~~~~~
-  >>> hist(img: numpy.ndarray[numpy.uint16])
+  >>> hist(img: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint16]])
       Compute the gray-level histogram of an unsigned integer image.
       
       This function counts the number of occurrences of each gray level
@@ -13,12 +13,12 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      img : np.ndarray[np.uint16]
+      img : NDArray[np.uint16]
           Input grayscale image with unsigned integer values.
       
       Returns
       -------
-      histogram : np.ndarray[np.uint64]
+      histogram : NDArray[np.uint64]
           Histogram array where `histogram[g]` is the number of pixels
           with gray level `g`. Histogram array of size
           `np.iinfo(img.dtype).max + 1 = 65_536`.
@@ -29,7 +29,9 @@ GLOBAL FUNCTIONS:
       - The histogram covers the full dynamic range of the input dtype,
         even if some gray levels are not present in the image.
 
-  >>> otsu_threshold(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+  >>> otsu_threshold(
+    histogram: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint64]]
+) -> tuple[float, float]
       Estimate foreground and background gray levels using Otsu's method.
       
       This function applies Otsu's criterion to a gray-level histogram to
@@ -39,7 +41,7 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      histogram : np.ndarray[np.uint64]
+      histogram : NDArray[np.uint64]
           Gray-level histogram of an image, where each entry represents
           the number of pixels at a given gray level.
       
@@ -57,7 +59,9 @@ GLOBAL FUNCTIONS:
         gray levels.
       - The foreground is defined as the class with the higher mean gray level.
 
-  >>> interp_fg_bg(histogram: numpy.ndarray[numpy.uint64]) -> tuple[float, float]
+  >>> interp_fg_bg(
+    histogram: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint64]]
+) -> tuple[float, float]
       Estimate foreground and background gray levels by histogram interpolation.
       
       This method analyzes the gray-level histogram of an image and estimates
@@ -75,7 +79,7 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      histogram : np.ndarray[np.uint64]
+      histogram : NDArray[np.uint64]
           Gray-level histogram of an image, where each entry represents the number
           of pixels at a given gray level.
       
@@ -101,7 +105,7 @@ GLOBAL FUNCTIONS:
         thresholding for unbalanced class distributions.
 
   >>> find_fg_bg(
-    img: numpy.ndarray[numpy.uint16],
+    img: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint16]],
     method: Literal['otsu', 'interp'] = 'otsu',
     save_file: Optional[str] = None,
     verbose: bool = True
@@ -118,7 +122,7 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      img : np.ndarray[np.uint16]
+      img : NDArray[np.uint16]
           Input grayscale image with unsigned integer values (typically `uint16`).
       method : {"otsu", "interp"}, optional
           Method used to separate foreground and background gray levels:
@@ -145,7 +149,11 @@ GLOBAL FUNCTIONS:
         visualization (the full histogram is used for estimation).
       - The returned values are floats, even though the input image is integer-valued.
 
-  >>> find_sigma_hat(image: numpy.ndarray[numpy.uint16], fg: float, bg: float) -> float
+  >>> find_sigma_hat(
+    image: numpy.ndarray[typing.Any, numpy.dtype[numpy.uint16]],
+    fg: float,
+    bg: float
+) -> float
       Estimate the standard deviation of noise in a CT image by analyzing voxels
       confidently assigned to a single phase.
       
@@ -159,8 +167,8 @@ GLOBAL FUNCTIONS:
       
       Parameters
       ----------
-      image : np.ndarray[np.uint16]
-          The input CT image as a `np.ndarray` of `np.uint16`, where voxel intensities
+      image : NDArray[np.uint16]
+          The input CT image as a `NDArray` of `np.uint16`, where voxel intensities
           represent X-ray absorption.
       fg : float
           The foreground gray level (nominal value for solid material).

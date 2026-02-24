@@ -12,7 +12,7 @@ ctrl_pts = spline.orderElevation(ctrl_pts, [2, 2, 2])
 ctrl_pts = spline.knotInsertion(ctrl_pts, [5, 5, 5])
 
 # Rescale control points to match the desired physical size
-ctrl_pts = ctrl_pts * l / (2 * np.linalg.norm(ctrl_pts, axis=0)[None])
+ctrl_pts = ctrl_pts * l / (2 * np.linalg.norm(ctrl_pts, axis=0)[None])  # type: ignore
 
 # Smooth control points near edges and corners to avoid sharp geometric artifacts
 ctrl_pts[:, 0, 0, 1:-1] = 0.5 * (ctrl_pts[:, 0, 1, 1:-1] + ctrl_pts[:, 1, 0, 1:-1])
@@ -110,7 +110,7 @@ pb = Problem(
 )
 
 # %% Solve the problem (default initial rho = 1 voxel)
-u_field, rho = pb.solve()
+u_field, rho = pb.solve(disable_parallel=False)
 
 # %% Plot distance maps before and after optimization
 pb.plot_results()
