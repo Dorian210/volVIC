@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "volVIC"
-version = "1.0.1"
+version = "1.0.2"
 description = "VOLume-based Virtual Image Correlation (volVIC) library for Python"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -25,8 +25,8 @@ dependencies = [
     "tqdm>=4.60",
     "interpylate>=1.0.2",
     "treeIDW>=1.0.1",
-    "bsplyne>=1.0.6",
-    "IGA_for_bsplyne>=1.0.3"
+    "bsplyne>=1.0.7",
+    "IGA_for_bsplyne>=1.0.4"
 ]
 
 classifiers = [
