@@ -769,6 +769,7 @@ class Mesh:
 
         kwargs.setdefault("cmap", ["#ff0000", "#00ff00"])
         kwargs.setdefault("show_scalar_bar", True)
+        kwargs.setdefault("clim", (0, 1))
         kwargs.setdefault("annotations", {0: "False", 1: "True"})
         scalar_bar_args = kwargs.get("scalar_bar_args", {})
         scalar_bar_args.setdefault("title", "Is Right Handed")

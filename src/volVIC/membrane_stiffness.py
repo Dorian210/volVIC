@@ -25,7 +25,7 @@ def make_coordinates_systems(
     bases.
 
     Given `ctrl_pts` (control points in physical space) and the derivatives of the basis functions with
-    respect to the isoparametric coordinates (`dN_dxi`, `dN_deta`), this function returns the covariant basis
+    respect to the parametric coordinates (`dN_dxi`, `dN_deta`), this function returns the covariant basis
     vectors (`A1`, `A2`) and the transformation components (`A11`, `A22`, `A12`) for each evaluation point.
 
     Parameters
@@ -33,10 +33,10 @@ def make_coordinates_systems(
     ctrl_pts : NDArray[np.floating]
         Array of control points in physical space, shaped as (`3`, `n_nodes_xi`, `n_nodes_eta`).
     dN_dxi : sps.spmatrix
-        Sparse matrix of derivatives of basis functions with respect to the first isoparametric coordinate
+        Sparse matrix of derivatives of basis functions with respect to the first parametric coordinate
         (`xi`). Shape: (`n_gauss`, `n_nodes`).
     dN_deta : sps.spmatrix
-        Sparse matrix of derivatives of basis functions with respect to the second isoparametric coordinate
+        Sparse matrix of derivatives of basis functions with respect to the second parametric coordinate
         (`eta`). Shape: (`n_gauss`, `n_nodes`).
 
     Returns
@@ -51,7 +51,7 @@ def make_coordinates_systems(
 
     Notes
     -----
-    - The transformation components are computed pointwise for each evaluation point in the isoparametric space.
+    - The transformation components are computed pointwise for each evaluation point in the parametric space.
     - The returned tuple has length 5, with each entry corresponding to an array of values at all evaluation
     points.
     """
@@ -82,17 +82,17 @@ def make_H(
     Parameters
     ----------
     A11 : NDArray[np.floating]
-        Covariant-to-contravariant basis component array for the (1,1) direction in isoparametric space.
+        Covariant-to-contravariant basis component array for the (1,1) direction in parametric space.
     A22 : NDArray[np.floating]
-        Covariant-to-contravariant basis component array for the (2,2) direction in isoparametric space.
+        Covariant-to-contravariant basis component array for the (2,2) direction in parametric space.
     A12 : NDArray[np.floating]
-        Covariant-to-contravariant basis component array for the (1,2) direction in isoparametric space.
+        Covariant-to-contravariant basis component array for the (1,2) direction in parametric space.
 
     Returns
     -------
     sps.spmatrix
         Hooke's tensor as a sparse matrix in contravariant basis Voigt notation, with shape
-        (`3 * n_gauss`, `3 * n_gauss`), where `n_gauss` is the number of isoparametric points.
+        (`3 * n_gauss`, `3 * n_gauss`), where `n_gauss` is the number of parametric points.
 
     Notes
     -----
@@ -120,7 +120,7 @@ def make_Bm(
     Assemble the Jacobian matrix `Bm` for membrane deformation in Voight notation in isogeometric analysis.
 
     This function constructs the sparse matrix `Bm` by combining the derivatives of the shape functions in the
-    isoparametric (`xi`, `eta`) directions with the corresponding covariant tangent vectors `A1` and `A2`. The
+    parametric (`xi`, `eta`) directions with the corresponding covariant tangent vectors `A1` and `A2`. The
     resulting matrix maps nodal displacements to membrane strains in Voight notation, and is used in
     isogeometric membrane finite element formulations.
 
@@ -128,10 +128,10 @@ def make_Bm(
     ----------
     dN_dxi : sps.spmatrix
         Sparse matrix of derivatives of the shape functions with respect to the `xi` coordinate in
-        isoparametric space. Shape: (`n_gauss`, `n_nodes`).
+        parametric space. Shape: (`n_gauss`, `n_nodes`).
     dN_deta : sps.spmatrix
         Sparse matrix of derivatives of the shape functions with respect to the `eta` coordinate in
-        isoparametric space. Shape: (`n_gauss`, `n_nodes`).
+        parametric space. Shape: (`n_gauss`, `n_nodes`).
     A1 : NDArray[np.floating]
         Covariant tangent vector in the `xi` direction. Shape: (`3`, `n_gauss`).
     A2 : NDArray[np.floating]
@@ -146,7 +146,7 @@ def make_Bm(
     -----
     - The output matrix `Bm` has shape (`3 * n_gauss`, `3 * n_nodes`), where `n_gauss` is the number of
     quadrature points and `n_nodes` is the number of control points (basis functions).
-    - The isoparametric space refers to the parametric domain of the B-spline basis.
+    - The parametric space refers to the parametric domain of the B-spline basis.
     """
     de_xi_du = sps.hstack(
         (
@@ -177,11 +177,11 @@ def make_membrane_stiffness_operator(
     spline: BSpline, ctrl_pts: NDArray[np.floating]
 ) -> sps.spmatrix:
     """
-    Assemble the global membrane stiffness matrix for a B-spline surface patch.
+    Assemble the membrane stiffness matrix for a B-spline surface patch.
 
-    This function computes the global stiffness operator `K` for a B-spline surface patch, considering only
+    This function computes the stiffness operator `K` for a B-spline surface patch, considering only
     in-plane (membrane) strain energy contributions and omitting out-of-plane (bending) effects. The assembly
-    is performed using Gauss-Legendre quadrature over the isoparametric domain.
+    is performed using Gauss-Legendre quadrature over the parametric domain.
 
     Parameters
     ----------
@@ -194,12 +194,12 @@ def make_membrane_stiffness_operator(
     Returns
     -------
     K : sps.spmatrix
-        Global stiffness matrix (`sps.spmatrix`) containing only membrane (in-plane) contributions.
+        Stiffness matrix (`sps.spmatrix`) containing only membrane (in-plane) contributions.
 
     Notes
     -----
     - The integration is performed using quadrature points determined by the spline degrees in each
-    isoparametric direction.
+    parametric direction.
     - The returned matrix `K` does not include bending or out-of-plane stiffness terms.
     """
     # Integration space
