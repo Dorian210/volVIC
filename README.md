@@ -16,6 +16,7 @@ The method is particularly suited to problems in experimental mechanics, where o
 - [Installation](#installation)
 - [Quick start](#quick-start)
 - [Module overview](#module-overview)
+- [Citation](#citation)
 - [License](#license)
 
 ---
@@ -248,6 +249,26 @@ from volVIC.integration_space_image import linspace_for_VIC_elem
 ## Documentation
 
 The full API documentation is available on the [Online Portal](https://dorian210.github.io/volVIC/).
+
+---
+
+## Citation
+
+If you use **volVIC** in your research, please cite the following paper where the method and its application to lattice structures are detailed:
+
+```bibtex
+@article{Bichet2025_method,
+  title={Isogeometric multipatch surface fitting in tomographic images: Application to lattice structures},
+  author={Bichet, D. and Passieux, J.C. and Périé, J.N. and Bouclier, R.},
+  journal={Computer Methods in Applied Mechanics and Engineering},
+  volume={436},
+  pages={117729},
+  year={2025},
+  issn={0045-7825},
+  doi={10.1016/j.cma.2025.117729},
+  url={[https://doi.org/10.1016/j.cma.2025.117729](https://doi.org/10.1016/j.cma.2025.117729)}
+}
+```
 
 ---
 
